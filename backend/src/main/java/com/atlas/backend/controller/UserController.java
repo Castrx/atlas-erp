@@ -1,10 +1,9 @@
 package com.atlas.backend.controller;
 
-import com.atlas.backend.dto.company.CompanyResponse;
-import com.atlas.backend.dto.company.CreateCompanyRequest;
-import com.atlas.backend.dto.company.UpdateCompanyRequest;
-import com.atlas.backend.entity.Company;
-import com.atlas.backend.service.CompanyService;
+import com.atlas.backend.dto.user.CreateUserRequest;
+import com.atlas.backend.dto.user.UpdateUserRequest;
+import com.atlas.backend.dto.user.UserResponse;
+import com.atlas.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,32 +12,32 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/companies")
+@RequestMapping("/users")
 @RequiredArgsConstructor
-public class CompanyController {
+public class UserController {
 
-    private final CompanyService service;
+    private final UserService service;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Company create(@RequestBody @Valid CreateCompanyRequest request) {
+    public UserResponse create(@RequestBody @Valid CreateUserRequest request) {
         return service.create(request);
     }
 
     @GetMapping
-    public List<CompanyResponse> findAll() {
+    public List<UserResponse> findAll() {
         return service.findAll();
     }
 
     @GetMapping("/{id}")
-    public CompanyResponse findById(@PathVariable Long id) {
+    public UserResponse findById(@PathVariable Long id) {
         return service.findById(id);
     }
 
     @PutMapping("/{id}")
-    public CompanyResponse update(
+    public UserResponse update(
             @PathVariable Long id,
-            @RequestBody @Valid UpdateCompanyRequest request) {
+            @RequestBody @Valid UpdateUserRequest request) {
 
         return service.update(id, request);
     }
