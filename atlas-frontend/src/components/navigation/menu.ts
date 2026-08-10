@@ -21,6 +21,7 @@ export const menu: MenuItem[] = [
     {
         label: "Dashboard",
         icon: LayoutDashboard,
+        path: "/",
     },
     {
         label: "Produtos",

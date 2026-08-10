@@ -1,0 +1,1 @@
+export { RecentSales } from "./RecentSales";
