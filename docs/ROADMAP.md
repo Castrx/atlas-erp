@@ -45,6 +45,24 @@ Primeiro módulo de negócio com UI própria. Escopo deliberadamente restrito a 
 - Testado ponta a ponta: `mvn package` (sem mudanças, build íntegro), `npm run build`, `npm run dev` + navegador real — navegação pelo menu até `/products`, e os quatro estados (loading, listagem com 2 produtos, empty state e error state) validados visualmente. Empty state validado sem tocar no banco (stub temporário no `service`, revertido em seguida); error state validado derrubando o backend de propósito e restaurando depois.
 - Deixa registrado no backlog (AE-030) que cadastro/edição/exclusão de Produtos permanecem pendentes — só a listagem foi entregue.
 
+### Sprint 4B — Produtos: cadastro
+Incremento sobre a Sprint 4A, no mesmo arquivo de página (loading/error/empty state da listagem também foram polidos nesta sprint — inseparável do cadastro no diff).
+
+- **Backend**: nenhuma alteração. `POST /products` (já existente) reutilizado como está.
+- **Frontend**: botão "Novo Produto", `ProductFormDialog` (React Hook Form + Zod, espelhando `CreateProductRequest`), `useCreateProduct` (TanStack Query, invalida `["products"]` no sucesso — a listagem se atualiza sozinha), `useCategories`/`category.service.ts` para popular o seletor de categoria, `Snackbar` de sucesso/erro. Erros de negócio do backend (ex.: SKU duplicado) são exibidos com a mensagem estruturada do `ApiError`.
+- Testado ponta a ponta: `npm run build`, `mvn test`, navegador real.
+- Avança o item AE-030 do backlog: cadastro concluído; edição e exclusão de Produtos permanecem pendentes.
+
+### Sprint 5A — Clientes: listagem e cadastro
+Segundo módulo de negócio com UI própria, replicando o padrão estabelecido em Produtos (Sprint 4A/4B) — validação de que o padrão de feature é reutilizável sem cópia cega.
+
+- **Backend**: nenhuma alteração. `GET /customers` e `POST /customers` (já existentes) inspecionados e reutilizados como estão — contrato (`CustomerRequest`/`CustomerResponse`) respeitado sem nenhuma adaptação necessária.
+- **Frontend**: nova feature `features/customers/` (`types/services/hooks/components/pages`, mesmo padrão de `products`). `useCustomers` + `customer.service.ts` + `CustomersTable` (componente de apresentação puro) + `CustomersPage` com loading (skeleton), empty e error state (com retry). Cadastro via botão "Novo Cliente" → `CustomerFormDialog` (React Hook Form + Zod) → `useCreateCustomer` (invalida `["customers"]` no sucesso) → `Snackbar` de sucesso/erro. Um `MetricCard` ("Total de clientes") — sem cálculo no cliente.
+- **Roteamento**: rota `/customers` adicionada (protegida, dentro de `MainLayout`); item "Clientes" do menu lateral ligado à rota (`menu.ts`).
+- Escopo deliberadamente restrito a listagem + cadastro — sem edição, exclusão, busca avançada, paginação ou filtros (ficam para sprints seguintes, mesmo racional da Sprint 4A para Produtos).
+- Testado ponta a ponta: `npm run build`, `mvn test`, e navegador real — login, Dashboard (sem regressão, inclusive refletindo o novo total de clientes ativos), navegação pelo menu até `/customers`, loading, listagem, cadastro válido, validação de campos (nome/documento obrigatórios, e-mail com formato inválido), erro de negócio do backend (documento duplicado, mensagem do `ApiError` exibida no Snackbar), atualização automática da tabela após cadastro, error state com retry (backend derrubado e restaurado de propósito), Produtos sem regressão, console sem erros, logout. Empty state **não** foi validado ao vivo (já havia um cliente semeado de sprint anterior e não há exclusão implementada para zerar a base sem intervenção direta no banco) — validado por inspeção de código, por ser estruturalmente idêntico ao empty state de Produtos, já testado ao vivo na Sprint 4A.
+- Avança o item AE-031 do backlog: listagem e cadastro concluídos; edição e exclusão de Clientes permanecem pendentes.
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.

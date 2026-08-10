@@ -31,6 +31,7 @@ export const menu: MenuItem[] = [
     {
         label: "Clientes",
         icon: Users,
+        path: "/customers",
     },
     {
         label: "Categorias",

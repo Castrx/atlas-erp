@@ -99,8 +99,9 @@ AppProviders
 | `/login` | público | `LoginPage` (feature `auth`) |
 | `/` | protegido (`ProtectedRoute`) | `MainLayout` + `DashboardPage` (feature `dashboard`) |
 | `/products` | protegido (`ProtectedRoute`) | `MainLayout` + `ProductsPage` (feature `products`) |
+| `/customers` | protegido (`ProtectedRoute`) | `MainLayout` + `CustomersPage` (feature `customers`) |
 
-Ainda não há rotas para Clientes, Categorias, Estoque, Vendas etc. — são os próximos módulos do roadmap. `NavItem` (`components/navigation`) aceita um `path` opcional e navega via `react-router` quando presente; hoje só o item "Produtos" do menu tem `path` associado (`menu.ts`) — os demais itens permanecem apenas visuais, sem destino.
+Ainda não há rotas para Categorias, Estoque, Vendas etc. — são os próximos módulos do roadmap. `NavItem` (`components/navigation`) aceita um `path` opcional e navega via `react-router` quando presente; hoje os itens "Produtos" e "Clientes" do menu têm `path` associado (`menu.ts`) — os demais itens permanecem apenas visuais, sem destino.
 
 ### Autenticação no frontend
 
@@ -111,7 +112,7 @@ Ainda não há rotas para Clientes, Categorias, Estoque, Vendas etc. — são os
 
 ### Data fetching
 
-TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso: `features/dashboard/hooks/useDashboard.ts` consome `GET /dashboard` via `useQuery`, sem cálculo algum no cliente — o hook só busca e cacheia o payload já agregado pelo backend. É o padrão recomendado para os próximos módulos (Produtos, Clientes, Estoque, Vendas).
+TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso em todas as features (`dashboard`, `products`, `customers`): cada hook (`useDashboard`, `useProducts`, `useCustomers`, etc.) consome o endpoint via `useQuery`, sem cálculo algum no cliente — só busca e cacheia o payload já processado pelo backend. É o padrão recomendado para os próximos módulos (Categorias, Estoque, Vendas).
 
 ## Débito técnico e código órfão conhecido
 

@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { MainLayout } from "../../layouts/MainLayout";
 import { DashboardPage } from "../../features/dashboard/pages";
 import { ProductsPage } from "../../features/products";
+import { CustomersPage } from "../../features/customers";
 import { LoginPage } from "../../features/auth";
 import { ProtectedRoute } from "../auth";
 
@@ -28,6 +29,17 @@ export function AppRoutes() {
           <ProtectedRoute>
             <MainLayout>
               <ProductsPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <CustomersPage />
             </MainLayout>
           </ProtectedRoute>
         }
