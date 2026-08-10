@@ -15,3 +15,18 @@ export interface Product {
   categoryId: number;
   categoryName: string;
 }
+
+/**
+ * Espelha com.atlas.backend.dto.product.CreateProductRequest (backend).
+ */
+export interface CreateProductInput {
+  name: string;
+  description?: string;
+  sku: string;
+  barcode?: string;
+  costPrice: number;
+  salePrice: number;
+  stock?: number;
+  minimumStock?: number;
+  categoryId: number;
+}
