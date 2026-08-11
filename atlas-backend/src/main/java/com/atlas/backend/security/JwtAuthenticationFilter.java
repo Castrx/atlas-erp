@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +17,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -28,12 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        System.out.println("\n================ JWT FILTER ================");
-
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("Sem token.");
             filterChain.doFilter(request, response);
             return;
         }
@@ -42,12 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
 
-            boolean valid = jwtService.isTokenValid(token);
-
-            System.out.println("Token válido? " + valid);
-
-            if (!valid) {
-                System.out.println("TOKEN INVÁLIDO");
+            if (!jwtService.isTokenValid(token)) {
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -74,18 +68,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder
                         .getContext()
                         .setAuthentication(authentication);
-
-                System.out.println("AUTENTICAÇÃO REALIZADA COM SUCESSO!");
             }
 
         } catch (Exception ex) {
-
-            System.out.println("ERRO NO JWT:");
-            ex.printStackTrace();
-
+            // Token ausente, expirado ou malformado: segue sem autenticar
+            // (comportamento idêntico ao anterior). Nada de token, header ou
+            // claims é logado aqui — apenas a categoria do erro, em debug.
+            log.debug("Falha ao autenticar JWT: {}", ex.getMessage());
         }
-
-        System.out.println("============================================\n");
 
         filterChain.doFilter(request, response);
     }

@@ -3,9 +3,9 @@ spring:
     name: atlas-erp
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/atlas_erp
-    username: atlas
-    password: atlas123
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/atlas_erp}
+    username: ${DB_USERNAME:atlas}
+    password: ${DB_PASSWORD:CHANGE_ME_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -26,5 +26,18 @@ server:
   port: 8080
 
 jwt:
-  secret: 4G7A6qD8mL2vN9xP1rS5tY8uW3zC6bH0kJ7nM4pQ9fX2aV5dE8gL1hR3tU6yI0oP
-  expiration: 86400000
+  # Secret de assinatura HS256. O default abaixo é um placeholder DEV-ONLY,
+  # claramente fictício, apenas para o app subir em desenvolvimento sem
+  # configuração. Em qualquer outro ambiente defina JWT_SECRET com um valor
+  # forte (>= 32 bytes, ex.: `openssl rand -base64 48`) - ver .env.example.
+  secret: ${JWT_SECRET:DEV_ONLY_CHANGE_ME_JWT_SECRET_0123456789abcdef0123456789abcdef}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+admin:
+  bootstrap:
+    # Provisionamento do primeiro ADMIN de uma instalação nova (AE-045).
+    # Ativo apenas quando ADMIN_BOOTSTRAP_EMAIL e ADMIN_BOOTSTRAP_PASSWORD
+    # estiverem definidas; idempotente (não duplica se o e-mail já existir).
+    email: ${ADMIN_BOOTSTRAP_EMAIL:}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+    name: ${ADMIN_BOOTSTRAP_NAME:Administrador}

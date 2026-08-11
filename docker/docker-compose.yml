@@ -5,9 +5,11 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: atlas_erp
-      POSTGRES_USER: atlas
-      POSTGRES_PASSWORD: atlas123
+      POSTGRES_DB: ${POSTGRES_DB:-atlas_erp}
+      POSTGRES_USER: ${POSTGRES_USER:-atlas}
+      # Default DEV-ONLY (placeholder fictício). Vale apenas na criação do
+      # volume; defina POSTGRES_PASSWORD em qualquer outro ambiente.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_DB_PASSWORD}
 
     ports:
       - "5432:5432"
@@ -24,8 +26,8 @@ services:
     restart: unless-stopped
 
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@atlas.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@atlas.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-CHANGE_ME_PGADMIN_PASSWORD}
 
     ports:
       - "5050:80"

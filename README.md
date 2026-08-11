@@ -1,123 +1,145 @@
 # Atlas ERP
 
-> Sistema ERP modular, construído como monorepo com backend em **Spring Boot** e frontend em **React**.
+> Sistema ERP modular para pequenas e médias empresas — monorepo com **backend Spring Boot 3** (Java 21) e **frontend React 19** (TypeScript).
 
-Atlas ERP é um ERP orientado a pequenas e médias empresas, cobrindo cadastro de produtos, clientes, categorias, controle de estoque, vendas e (futuramente) financeiro e relatórios. O projeto está em estágio inicial de desenvolvimento: a fundação de autenticação está pronta e testada de ponta a ponta; os módulos de negócio (produtos, clientes, estoque, vendas) têm backend funcional mas ainda não têm interface no frontend.
+O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoque, vendas, usuários e empresas, com autenticação JWT e controle de acesso por papel (RBAC). É um projeto de estudo/produção em evolução: a fundação (autenticação, RBAC, testes) e os módulos de Produtos e Clientes estão completos e validados de ponta a ponta.
 
 ## Status do projeto
 
-🚧 **Pré-alfa / em desenvolvimento ativo.** Não é production-ready.
-
 | Área | Status |
 |---|---|
-| Autenticação (login/logout, JWT, rotas protegidas) | ✅ Funcional, testada ponta a ponta |
-| CORS / segurança básica de API | ✅ Configurado para desenvolvimento |
-| CRUD de Produtos, Clientes, Categorias, Estoque, Vendas | ⚙️ Backend implementado — sem UI no frontend ainda |
-| Dashboard | 🚧 Placeholder — sem dados reais |
-| Multi-tenancy (Empresa) | 📋 Modelado no domínio, não aplicado ainda |
-| Testes automatizados | 📋 Cobertura mínima (1 teste de contexto no backend) |
-| CI/CD | 📋 Não configurado |
+| Autenticação JWT (login/logout, rotas protegidas) | ✅ Completa e testada |
+| RBAC — papéis `ADMIN`/`USER` (backend `@PreAuthorize` + reflexo na UI) | ✅ Completo e testado |
+| Produtos — CRUD completo (listar, criar, editar, excluir) | ✅ Completo e testado |
+| Clientes — CRUD completo (exclusão = inativação) | ✅ Completo e testado |
+| Dashboard com dados reais (indicadores, gráfico, listas) | ✅ Funcional |
+| Categorias, Estoque, Vendas, Empresas, Usuários | ⚙️ Backend implementado — UI pendente |
+| Multi-tenancy (Empresa) | 📋 Modelado no domínio, não aplicado |
+| Testes automatizados | ✅ 83 backend + 47 frontend |
+| CI/CD | 📋 Não configurado (próximo passo) |
 
-Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md) para o plano detalhado.
+Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md).
+
+## Funcionalidades existentes
+
+- **Autenticação**: login/logout com JWT stateless; senha armazenada com bcrypt; rotas protegidas no frontend e endpoints protegidos no backend.
+- **RBAC**: `register` público cria **sempre** usuário `USER` (nunca `ADMIN`). O backend autoriza por papel via `@PreAuthorize` (excluir é `ADMIN`-only); a UI reflete isso (ex.: oculta o botão "Excluir" para `USER`). Um `403` não derruba a sessão.
+- **Produtos**: CRUD completo com validação (Zod + backend), categoria obrigatória, estoque mínimo, erros de SKU duplicado exibidos na UI. Exclusão é física (`DELETE`).
+- **Clientes**: CRUD completo com CPF/CNPJ único, e-mail validado. Exclusão é **inativação** (`active = false`); a listagem e o métrico consideram apenas clientes ativos (decisão documentada — filtrar no backend é débito conhecido).
+- **Dashboard**: métricas reais (total de produtos/clientes, baixo estoque, vendas recentes, receita dos últimos 7 dias) com gráfico.
+- **Backend exposto**: categorias, estoque (movimentações), vendas (com itens e status), empresas e usuários têm endpoints implementados (parte sem UI ainda).
 
 ## Stack
 
 **Backend** (`atlas-backend/`)
-- Java 21 · Spring Boot 3.5.4 · Spring Security · Spring Data JPA
+- Java 21 · Spring Boot 3.5 · Spring Security · Spring Data JPA
 - PostgreSQL 17 · Flyway (migrations versionadas)
-- JWT (JJWT 0.12.7, HS256, stateless)
+- JWT (JJWT, HS256, stateless) · bcrypt
 - springdoc-openapi (Swagger UI em `/swagger-ui.html`)
-- Maven (via wrapper, `mvnw`)
+- Maven (wrapper `mvnw`)
 
 **Frontend** (`atlas-frontend/`)
 - React 19 · TypeScript · Vite 8
 - MUI (Material UI) 7 · Emotion
 - React Router 7 · TanStack Query 5
-- React Hook Form + Zod
-- Axios
+- React Hook Form + Zod · Axios
 
 **Infraestrutura**
 - Docker Compose (`docker/docker-compose.yml`) — PostgreSQL + pgAdmin para desenvolvimento local
 
-## Estrutura do monorepo
+## Arquitetura
 
-```
-atlas-erp/
-├── atlas-backend/      # API REST (Spring Boot)
-├── atlas-frontend/     # SPA (React + Vite)
-├── docker/             # docker-compose para infraestrutura local (Postgres, pgAdmin)
-├── docs/               # Documentação do projeto (arquitetura, roadmap, segurança, API...)
-└── scripts/            # Scripts utilitários (reservado)
-```
+- **Backend**: camadas `controller → service → repository`, com `entity`, `dto`, `mapper`, `security` e `exception`. Migrations Flyway versionadas; `ddl-auto: validate`. Segurança stateless com filtro JWT + `@PreAuthorize`.
+- **Frontend**: padrão de feature por domínio (`features/<módulo>/{components,hooks,pages,services,types}`), com estado de servidor via TanStack Query e formulários tipados (react-hook-form + Zod).
 
-## Como rodar localmente
+Detalhes em [docs/architecture.md](docs/architecture.md), [docs/SECURITY.md](docs/SECURITY.md) e [docs/API_GUIDELINES.md](docs/API_GUIDELINES.md).
 
-### Pré-requisitos
-- Java 21
-- Node.js 18+ e npm
-- Docker Desktop
+## Testes
 
-### 1. Subir a infraestrutura (PostgreSQL)
+| Suíte | Comando | Resultado |
+|---|---|---|
+| Backend (unit + integração com Testcontainers) | `cd atlas-backend && ./mvnw test` | ✅ 83 testes |
+| Frontend (vitest + React Testing Library) | `cd atlas-frontend && npm test` | ✅ 47 testes |
+| Lint / build | `npm run lint` · `npm run build` | ✅ |
+
+Os testes de integração do backend sobem um PostgreSQL efêmero via Testcontainers (isolado do banco de desenvolvimento) e rodam as migrations Flyway reais.
+
+## Como executar localmente
+
+Pré-requisitos: Docker, JDK 21, Node.js 20+.
 
 ```bash
+# 1. Suba o PostgreSQL (+ pgAdmin opcional)
 cd docker
 docker compose up -d postgres
 ```
 
-O banco fica disponível em `localhost:5432` (`atlas_erp` / usuário `atlas` / senha `atlas123` — credenciais de desenvolvimento, ver [SECURITY.md](docs/SECURITY.md)).
-
-### 2. Rodar o backend
+> ⚠️ **Já tinha o volume do Postgres?** O `POSTGRES_PASSWORD` do compose só define a senha na **primeira** inicialização do volume. Se o `postgres_data` já existe (criado com `atlas123`, como no `docker-compose` original), o Postgres **continua autenticando com a senha antiga** — não é preciso recriar nada. Antes do passo 2, apenas aponte o backend para a mesma senha: `export DB_PASSWORD=atlas123`. Só recrie o volume (`docker compose down -v && docker compose up -d postgres`) se você **quiser** de fato trocar as credenciais.
 
 ```bash
+# 2. Backend (porta 8080) — em outro terminal
 cd atlas-backend
 ./mvnw spring-boot:run
-```
+# Swagger UI: http://localhost:8080/swagger-ui.html
 
-A API sobe em `http://localhost:8080`. As migrations do Flyway rodam automaticamente. Documentação interativa em `http://localhost:8080/swagger-ui.html`.
-
-### 3. Rodar o frontend
-
-```bash
+# 3. Frontend (porta 5173) — em outro terminal
 cd atlas-frontend
 npm install
 npm run dev
+# App: http://localhost:5173
 ```
 
-A aplicação sobe em `http://localhost:5173` (CORS já liberado para essa origem em desenvolvimento).
+### Variáveis de ambiente
 
-### 4. Primeiro acesso
+O backend lê configuração de variáveis de ambiente, com defaults DEV-ONLY fictícios no `application.yml`. Para personalizar, use o modelo em [`.env.example`](.env.example) (nenhum valor real é versionado):
 
-Não há usuário seed. Crie um usuário via `POST /auth/login` do backend usando o endpoint de registro (`POST /auth/register`, role `ADMIN` ou `USER`) — pelo Swagger UI ou qualquer cliente HTTP — e faça login normalmente pela tela `/login` do frontend.
+| Variável | Default | Descrição |
+|---|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/atlas_erp` | URL do banco |
+| `DB_USERNAME` / `DB_PASSWORD` | `atlas` / `CHANGE_ME_DB_PASSWORD` | Credenciais do banco |
+| `JWT_SECRET` | placeholder DEV-ONLY | Secret de assinatura HS256 (≥ 32 bytes; gere com `openssl rand -base64 48`) |
+| `JWT_EXPIRATION` | `86400000` | Validade do token em ms |
+| `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` / `ADMIN_BOOTSTRAP_NAME` | — | Cria o primeiro ADMIN (ver abaixo) |
 
-## Documentação
+O `docker-compose.yml` também usa variáveis (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`).
 
-| Documento | Conteúdo |
+**Como configurar o `.env` a partir do `.env.example`:**
+
+1. Copie o modelo da raiz: `cp .env.example .env` e edite os valores do seu ambiente (o `.env` é ignorado pelo Git — nenhum valor real é versionado).
+2. **O Spring Boot não lê `.env` automaticamente**: as variáveis precisam estar no ambiente do processo do backend. Exporte no terminal antes do `mvnw` (ex.: `export DB_PASSWORD=...`) ou configure-as na sua IDE.
+3. **O `docker compose` lê o `.env` do diretório onde está o compose** automaticamente: rodando `cd docker && docker compose up`, ele carrega `docker/.env`. Crie `docker/.env` com as variáveis `POSTGRES_*`/`PGADMIN_*` do modelo da raiz.
+
+### Como criar o primeiro ADMIN
+
+Desde a implementação do RBAC, o `register` público cria apenas `USER` — e `POST /users` (que cria `ADMIN`) é exclusivo de `ADMIN`. Para uma instalação nova, defina as variáveis de bootstrap **antes** da primeira subida do backend:
+
+```bash
+export ADMIN_BOOTSTRAP_EMAIL=admin@minhaempresa.com
+export ADMIN_BOOTSTRAP_PASSWORD='uma-senha-forte'
+./mvnw spring-boot:run
+```
+
+Na subida, o backend cria o usuário `ADMIN` (bcrypt). **Idempotente**: se o e-mail já existir, nada é feito. Depois de criar, remova as variáveis.
+
+## Screenshots
+
+Algumas capturas do estado atual (mais em [`docs/demo/`](docs/demo/)):
+
+| | |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | Arquitetura do sistema, camadas, fluxo de dados |
-| [docs/SECURITY.md](docs/SECURITY.md) | Modelo de autenticação, políticas de segurança, limitações conhecidas |
-| [docs/API_GUIDELINES.md](docs/API_GUIDELINES.md) | Convenções da API REST |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Marcos do produto, passado e futuro |
-| [docs/PRODUCT_BACKLOG.md](docs/PRODUCT_BACKLOG.md) | Itens de backlog priorizados |
-| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Como contribuir com o projeto |
-| [docs/domain-model.md](docs/domain-model.md) | Modelo de domínio (entidades de negócio) |
+| ![Login](docs/demo/01-login.jpg) | ![Dashboard](docs/demo/03-dashboard-indicadores.jpg) |
+| ![Produtos](docs/demo/07-produtos-listagem.jpg) | ![Cadastro de produto](docs/demo/09-produtos-cadastro-preenchido.jpg) |
 
-### Material de apresentação (TCC)
+## Roadmap / limitações
 
-| Documento | Conteúdo |
-|---|---|
-| [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Visão geral: objetivo, problema, stack, arquitetura, módulos, diferenciais |
-| [docs/ARCHITECTURE_DIAGRAM.md](docs/ARCHITECTURE_DIAGRAM.md) | Diagrama de arquitetura (Mermaid), isolado para slides |
-| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Roteiro de demonstração cronometrado (5 min) |
-| [docs/POSSIBLE_QUESTIONS.md](docs/POSSIBLE_QUESTIONS.md) | Perguntas prováveis da banca, já respondidas |
-| [docs/FUTURE_SCOPE.md](docs/FUTURE_SCOPE.md) | Escopo futuro detalhado por módulo, com esforço estimado |
-| [docs/demo/](docs/demo/) | Capturas de tela do fluxo de demonstração, em ordem lógica |
+- Módulos sem UI ainda: Categorias, Estoque, Vendas, Empresas, Usuários (backends prontos).
+- Multi-tenancy modelado, não aplicado.
+- Filtrar clientes inativos no backend (hoje é feito no frontend).
+- Paginação/busca nas listagens.
+- CI/CD e conteinerização completa do app (próximos passos planejados).
 
-> Nota: o diretório `docs/` também contém uma árvore de documentação mais granular (`docs/architecture/`, `docs/backend/`, `docs/frontend/`, `docs/api/`, `docs/ui/`, `docs/engineering/`, `docs/roadmap/`) criada como estrutura para expansão futura. Hoje a maior parte desses arquivos ainda está vazia — os documentos acima, na raiz de `docs/`, são a referência atual e consolidada.
+Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md) para o plano detalhado.
 
 ## Licença
 
-Ainda não definida. Até a definição formal, considere este repositório **todos os direitos reservados**.
-
-## Contribuindo
-
-Veja [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+Distribuído sob a [Licença MIT](LICENSE).

@@ -1,16 +1,34 @@
-# Compiled class file
-*.class
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
 
-# Log file
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Java / Maven (por app) ---
+# O atlas-backend tem .gitignore próprio (target/, etc.); a raiz cobre resíduos.
+
+# --- Node / frontend (por app) ---
+# O atlas-frontend tem .gitignore próprio (node_modules/, dist/, etc.).
+
+# --- Logs ---
+logs/
 *.log
+npm-debug.log*
 
-# BlueJ files
-*.ctxt
+# --- Ambiente / segredos ---
+# .env contém valores reais e NUNCA deve ser versionado.
+# .env.example é o modelo permitido.
+.env
+.env.*
+!.env.example
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# --- Compilados / empacotados (default Maven) ---
+*.class
 *.jar
 *.war
 *.nar
@@ -19,6 +37,8 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# --- Outros resíduos ---
+*.ctxt
+.mtj.tmp/
 hs_err_pid*
 replay_pid*

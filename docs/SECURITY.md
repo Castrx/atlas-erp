@@ -15,7 +15,7 @@ Este documento descreve o modelo de segurança atual do Atlas ERP, o que já est
 
 - Rotas públicas: `/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**`.
 - Todas as demais rotas exigem um JWT válido (`anyRequest().authenticated()`).
-- Papéis `ADMIN` e `USER` existem no domínio (seed via migration `V8`), e o token carrega as roles do usuário — **mas nenhum endpoint hoje restringe acesso por papel**. `@EnableMethodSecurity` está habilitado no `SecurityConfig`, porém sem nenhuma anotação `@PreAuthorize` em uso. Ou seja: qualquer usuário autenticado, independentemente do papel, acessa qualquer endpoint protegido. **Isso é uma lacuna conhecida**, não uma escolha de design — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md).
+- Papéis `ADMIN` e `USER` existem no domínio (seed via migration `V8`), e o token carrega as roles do usuário. A autorização é feita por papel no backend via `@PreAuthorize` (ex.: exclusão de produto/cliente é `ADMIN`-only), e a UI reflete os papéis, ocultando ações administrativas para `USER`.
 
 ## CORS
 
@@ -43,16 +43,16 @@ Estas são decisões conscientes para o estágio de maturidade atual do projeto,
 |---|---|---|
 | Token armazenado em `localStorage` | Acessível via JavaScript no mesmo domínio | Exposto a XSS, se algum vetor de XSS existir na aplicação |
 | Sem refresh token | Token de 24h fixo, sem revogação | Um token vazado permanece válido até expirar; não há logout server-side |
-| Sem RBAC aplicado | Roles existem mas não são checadas | Qualquer usuário autenticado tem acesso equivalente a `ADMIN` |
+| Gestão de papéis limitada | Papéis vêm do seed `V8` e de `POST /users` (ADMIN-only); o `register` público cria sempre `USER` | Sem auto-serviço de concessão de `ADMIN` — atribuição manual |
 | Sem rate limiting em `/auth/login` | Nenhum controle de tentativas | Suscetível a força bruta de credenciais |
 | Sem bloqueio de conta | `isAccountNonLocked()` sempre `true` em `CustomUserDetails` | Nenhuma proteção contra tentativas repetidas por usuário |
-| Logging de debug do filtro JWT | `JwtAuthenticationFilter` imprime o token recebido e claims no stdout a cada requisição | Vazamento de tokens em logs — **deve ser removido antes de qualquer ambiente compartilhado** |
-| Secret JWT em `application.yml` | Chave simétrica em texto plano no repositório (ambiente de dev) | Não pode ser reusada fora de dev; produção exige variável de ambiente / secret manager |
+| Logging do filtro JWT | `JwtAuthenticationFilter` registra apenas a categoria do erro em `DEBUG` (nunca token, header ou claims) | Risco baixo; não deve ser elevado a `INFO` sem revisão |
+| Secret JWT | Fornecido pela variável de ambiente `JWT_SECRET` (default DEV-ONLY fictício em `application.yml`) | Produção exige um `JWT_SECRET` real e aleatório com **≥32 bytes**, não o default de dev |
 | Sem multi-tenancy aplicado | `Company` existe no domínio mas não restringe acesso a dados | Em single-tenant hoje não é um problema; torna-se crítico se/quando multiempresa for ativado |
 
 ## Segredos e configuração sensível
 
-Credenciais de banco (`atlas`/`atlas123`) e o secret JWT em `atlas-backend/src/main/resources/application.yml` são **valores de desenvolvimento local**, versionados propositalmente para facilitar onboarding no ambiente Docker Compose local. Eles **não devem ser reaproveitados** em nenhum ambiente acessível fora da máquina do desenvolvedor.
+Nenhuma credencial real é versionada. Toda a configuração sensível é lida de **variáveis de ambiente** (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`), com defaults DEV-ONLY fictícios e claramente marcados em `atlas-backend/src/main/resources/application.yml` (ex.: `CHANGE_ME_DB_PASSWORD`, `DEV_ONLY_CHANGE_ME_JWT_SECRET_...`). O modelo em `.env.example` contém apenas placeholders — nenhum valor real. As únicas credenciais concretas no código estão em **testes efêmeros** (Testcontainers, em `AbstractIntegrationTest`), isoladas da configuração da aplicação. Em produção, defina um `JWT_SECRET` real (≥32 bytes) via variável de ambiente e não reutilize os defaults de desenvolvimento.
 
 ## Reportando uma vulnerabilidade
 
