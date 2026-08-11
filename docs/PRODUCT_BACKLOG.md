@@ -57,8 +57,8 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
-| AE-060 | Testes automatizados de backend por módulo (hoje só existe o teste de contexto padrão) | backend | 🟡 | todo |
-| AE-061 | Testes automatizados de frontend (hoje não há nenhum) | frontend | 🟡 | todo |
+| AE-060 | Testes automatizados de backend por módulo — cobertura inicial de Auth/Products/Customers/Dashboard entregue na Sprint 6A; faltam Sale, Stock, Company, User (sem UI ainda) | backend | 🟡 | em andamento |
+| AE-061 | Testes automatizados de frontend — cobertura inicial (ProtectedRoute, ProductFormDialog, CustomerFormDialog, useProducts, useCustomers) entregue na Sprint 6A; faltam os demais componentes/hooks | frontend | 🟡 | em andamento |
 | AE-062 | Testes E2E cobrindo login/logout/rota protegida (validados manualmente na Sprint 1B) | frontend | 🟢 | todo |
 | AE-063 | Pipeline de CI (lint + build + testes em cada PR) | infra | 🔴 | todo |
 | AE-064 | Preencher a árvore de documentação granular em `docs/` (`architecture/`, `backend/`, `frontend/`, `api/`, `ui/`, `engineering/`, `roadmap/`), hoje majoritariamente vazia, ou removê-la se redundante com os documentos na raiz de `docs/` | docs | 🟢 | todo |

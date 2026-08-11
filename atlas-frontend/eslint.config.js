@@ -19,4 +19,13 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // react-refresh/only-export-components existe para garantir que o Fast
+    // Refresh funcione em tempo de dev — não se aplica a arquivos de teste
+    // (nunca fazem parte do HMR da aplicação).
+    files: ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

@@ -68,6 +68,18 @@ Fluxo completo documentado em [SECURITY.md](SECURITY.md). Resumo: login stateles
 
 Não há autorização por papel (`@PreAuthorize`) aplicada em nenhum endpoint hoje, apesar de `@EnableMethodSecurity` estar habilitado e dos papéis `ADMIN`/`USER` existirem na base — **gap conhecido**, ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md).
 
+### Testes automatizados (`src/test/`)
+
+Desde a Sprint 6A, organizados em três pacotes:
+
+```
+unit/          → Mockito puro, sem Spring nem banco (services, JwtService)
+integration/   → MockMvc + Testcontainers, ponta a ponta real (*IT.java)
+support/       → infraestrutura reutilizável (AbstractIntegrationTest, TestDataFactory)
+```
+
+Os testes de integração sobem um PostgreSQL efêmero via Testcontainers (mesma imagem do `docker-compose.yml`), completamente isolado do banco de desenvolvimento — nenhum teste depende de dado semeado manualmente, e `mvn test` não exige mais `docker compose up -d postgres` rodando antes (só o Docker em execução). Cada teste roda numa transação revertida ao final. O Surefire precisou ser configurado explicitamente para incluir `**/*IT.java` (por padrão só roda `**/*Test.java`), para `mvn test` cobrir as duas suítes num único comando. Cobertura atual: `JwtService`, `AuthenticationService`, `ProductService`, `CustomerService`, `DashboardService` (unitário) e `AuthController`, `ProductController`, `CustomerController` (integração) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-060`) para o que ainda falta.
+
 ## Frontend (`atlas-frontend/`)
 
 Organização por responsabilidade, dentro de `src/`:
@@ -113,6 +125,20 @@ Ainda não há rotas para Categorias, Estoque, Vendas etc. — são os próximos
 ### Data fetching
 
 TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso em todas as features (`dashboard`, `products`, `customers`): cada hook (`useDashboard`, `useProducts`, `useCustomers`, etc.) consome o endpoint via `useQuery`, sem cálculo algum no cliente — só busca e cacheia o payload já processado pelo backend. É o padrão recomendado para os próximos módulos (Categorias, Estoque, Vendas).
+
+### Testes automatizados
+
+Desde a Sprint 6A: Vitest + React Testing Library, configurados em `vite.config.ts` (seção `test`) sobre a infraestrutura já existente — nenhuma ferramenta além do necessário (`npm run test`). Infraestrutura reutilizável em `src/test/`:
+
+```
+src/test/setup.ts        → jest-dom, cleanup automático entre testes, stubs de
+                            scrollIntoView/matchMedia/ResizeObserver (o MUI exige
+                            essas APIs de navegador, ausentes no jsdom)
+src/test/test-utils.tsx  → render() customizado (QueryClientProvider + MemoryRouter)
+                            e createQueryWrapper() para testes de hook
+```
+
+Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual: `ProtectedRoute`, `ProductFormDialog`, `CustomerFormDialog`, `useProducts`, `useCustomers` — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
 
 ## Débito técnico e código órfão conhecido
 
