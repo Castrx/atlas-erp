@@ -167,6 +167,42 @@ class SaleServiceTest {
     }
 
     @Test
+    void create_deveLancarBusinessException_quandoClienteInativo() {
+        cliente.setActive(false);
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(cliente));
+
+        SaleRequest request = new SaleRequest(
+                1L,
+                List.of(new SaleItemRequest(1L, 2)));
+
+        assertThatThrownBy(() -> saleService.create(request, auth))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Não é possível vender para um cliente inativo.");
+
+        verify(saleRepository, never()).save(any());
+        verify(stockMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void create_deveLancarBusinessException_quandoProdutoInativo() {
+        mockBase();
+        produto.setActive(false);
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(produto));
+
+        SaleRequest request = new SaleRequest(
+                1L,
+                List.of(new SaleItemRequest(1L, 2)));
+
+        assertThatThrownBy(() -> saleService.create(request, auth))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Não é possível vender para um produto inativo.");
+
+        verify(productRepository, never()).save(produto);
+        verify(saleItemRepository, never()).save(any());
+        verify(stockMovementRepository, never()).save(any());
+    }
+
+    @Test
     void cancel_deveRestaurarEstoque_eMarcarVendaComoCancelada() {
         Sale venda = Sale.builder()
                 .id(1L)

@@ -18,8 +18,10 @@ export interface Product {
 
 /**
  * Espelha com.atlas.backend.dto.product.CreateProductRequest (backend).
- * O UpdateProductRequest tem exatamente os mesmos campos — este mesmo
- * tipo é reutilizado como payload de PUT /products/{id}.
+ *
+ * O UpdateProductRequest NÃO aceita "stock" (M4): no PUT o payload reutiliza
+ * este tipo, mas o ProductFormDialog envia stock apenas no create — no modo
+ * edição o campo fica desabilitado e o valor é undefined.
  */
 export interface CreateProductInput {
   name: string;

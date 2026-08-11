@@ -80,7 +80,9 @@ public class ProductService {
         product.setBarcode(request.barcode());
         product.setCostPrice(request.costPrice());
         product.setSalePrice(request.salePrice());
-        product.setStock(request.stock());
+        // M4: NÃO chamar setStock() aqui — estoque é imutável no update de
+        // produto e só muda pelos fluxos de estoque (StockService, venda,
+        // cancelamento), que mantêm o StockMovement como trilha.
         product.setMinimumStock(request.minimumStock());
         product.setCategory(category);
 

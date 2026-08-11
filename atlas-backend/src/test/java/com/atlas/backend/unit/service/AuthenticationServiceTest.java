@@ -67,7 +67,7 @@ class AuthenticationServiceTest {
 
         assertThatThrownBy(() -> authenticationService.register(request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("Já existe um usuário com este e-mail.");
+                .hasMessage("Não foi possível concluir o registro. Verifique os dados e tente novamente.");
 
         verify(userRepository, never()).save(any());
     }

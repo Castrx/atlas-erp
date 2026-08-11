@@ -38,6 +38,12 @@ public class SaleService {
                 .orElseThrow(() ->
                         new BusinessException("Cliente não encontrado."));
 
+        // M5: cliente inativo não pode receber novas vendas. Vendas existentes
+        // (histórico) e cancelamentos continuam funcionando — só o create rejeita.
+        if (Boolean.FALSE.equals(customer.getActive())) {
+            throw new BusinessException("Não é possível vender para um cliente inativo.");
+        }
+
         User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() ->
                         new BusinessException("Usuário não encontrado."));
@@ -61,6 +67,13 @@ public class SaleService {
             Product product = productRepository.findByIdForUpdate(itemRequest.productId())
                     .orElseThrow(() ->
                             new BusinessException("Produto não encontrado."));
+
+            // M5: produto inativo não pode ser vendido em novas vendas. O lock
+            // pessimista é mantido — o cancelamento usa findByIdForUpdate sem
+            // filtro e continua restaurando estoque de produto inativo.
+            if (Boolean.FALSE.equals(product.getActive())) {
+                throw new BusinessException("Não é possível vender para um produto inativo.");
+            }
 
             if (product.getStock() < itemRequest.quantity()) {
                 throw new BusinessException(

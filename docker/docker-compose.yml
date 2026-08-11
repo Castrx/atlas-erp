@@ -7,12 +7,15 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-atlas_erp}
       POSTGRES_USER: ${POSTGRES_USER:-atlas}
-      # Default DEV-ONLY (placeholder fictício). Vale apenas na criação do
-      # volume; defina POSTGRES_PASSWORD em qualquer outro ambiente.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_DB_PASSWORD}
+      # Obrigatória: o compose falha rápido se não estiver definida (defina em
+      # docker/.env). Aplica-se na criação do volume; nunca usa default inseguro.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD é obrigatória (defina em docker/.env)}
 
     ports:
-      - "5432:5432"
+      # Só loopback — o postgres não fica exposto fora da máquina. O backend do
+      # Compose alcança via rede interna (postgres:5432); o backend local
+      # (./mvnw spring-boot:run) continua acessando via localhost:5432.
+      - "127.0.0.1:5432:5432"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -40,7 +43,7 @@ services:
       # segredo hardcoded.
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-atlas_erp}
       DB_USERNAME: ${POSTGRES_USER:-atlas}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_DB_PASSWORD}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD é obrigatória (defina em docker/.env)}
       JWT_SECRET: ${JWT_SECRET:-DEV_ONLY_CHANGE_ME_JWT_SECRET_0123456789abcdef0123456789abcdef}
       # Bootstrap do primeiro ADMIN (idempotente) — define no docker/.env
       # apenas na primeira subida; vazio = runner inerte.
@@ -84,10 +87,12 @@ services:
 
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@atlas.local}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-CHANGE_ME_PGADMIN_PASSWORD}
+      # Obrigatória (fail-fast): defina em docker/.env; nunca usa default inseguro.
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD é obrigatória (defina em docker/.env)}
 
     ports:
-      - "5050:80"
+      # Só loopback — acesso de desenvolvimento em http://localhost:5050.
+      - "127.0.0.1:5050:80"
 
     depends_on:
       - postgres

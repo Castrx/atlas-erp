@@ -78,6 +78,7 @@ Pré-requisitos: Docker, JDK 21, Node.js 20+.
 ```bash
 # 1. Suba o PostgreSQL (+ pgAdmin opcional)
 cd docker
+cp .env.example .env  # credenciais obrigatórias — o compose falha se o .env não existir
 docker compose up -d postgres
 ```
 

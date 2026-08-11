@@ -1,6 +1,7 @@
 package com.atlas.backend.dto.product;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -26,8 +27,11 @@ public record UpdateProductRequest(
         @DecimalMin("0.00")
         BigDecimal salePrice,
 
-        Integer stock,
-
+        // stock intencionalmente AUSENTE no update (Sprint Security & Data
+        // Integrity / M4): estoque só muda pelos fluxos de estoque
+        // (StockService, venda, cancelamento) — nunca pelo PUT de produto.
+        // Isso preserva o StockMovement como trilha de auditoria.
+        @Min(0)
         Integer minimumStock,
 
         @NotNull

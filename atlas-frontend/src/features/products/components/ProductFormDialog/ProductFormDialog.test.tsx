@@ -169,6 +169,11 @@ describe("ProductFormDialog", () => {
     expect(screen.getByLabelText("SKU")).toHaveValue("TEC-002");
     expect(screen.getByLabelText("Preço de venda")).toHaveValue("220");
 
+    // M4: no modo edição o estoque fica desabilitado (imutável no PUT) e mostra
+    // o estoque atual.
+    expect(screen.getByLabelText("Estoque inicial")).toBeDisabled();
+    expect(screen.getByLabelText("Estoque inicial")).toHaveValue("3");
+
     await user.clear(screen.getByLabelText("Preço de venda"));
     await user.type(screen.getByLabelText("Preço de venda"), "240");
 
@@ -184,7 +189,7 @@ describe("ProductFormDialog", () => {
       barcode: undefined,
       costPrice: 120,
       salePrice: 240,
-      stock: 3,
+      stock: undefined,
       minimumStock: 1,
       categoryId: 1,
     });

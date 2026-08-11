@@ -33,7 +33,10 @@ public class AuthenticationService {
     public UserResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessException("Já existe um usuário com este e-mail.");
+            // Mensagem genérica de propósito: /auth/register é público e não
+            // deve revelar se um e-mail já está cadastrado (enumeração de
+            // contas). O POST /users (ADMIN-only) mantém a mensagem precisa.
+            throw new BusinessException("Não foi possível concluir o registro. Verifique os dados e tente novamente.");
         }
 
         // Auto-registro público sempre cria USER - o cliente não escolhe

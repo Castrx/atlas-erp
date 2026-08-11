@@ -106,7 +106,7 @@ class ProductServiceTest {
 
         UpdateProductRequest request = new UpdateProductRequest(
                 "Novo nome", null, "SKU-1", null,
-                BigDecimal.TEN, BigDecimal.valueOf(25), 10, 2, 1L);
+                BigDecimal.TEN, BigDecimal.valueOf(25), 2, 1L);
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(existente));
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(categoria()));
@@ -119,6 +119,31 @@ class ProductServiceTest {
     }
 
     @Test
+    void update_devePreservarEstoque() {
+        Product existente = Product.builder()
+                .id(1L).name("Antigo").sku("SKU-1")
+                .costPrice(BigDecimal.TEN).salePrice(BigDecimal.valueOf(20))
+                .stock(5).minimumStock(1)
+                .category(categoria())
+                .build();
+
+        // M4: o PUT de produto não carrega nem aplica estoque — o estoque é
+        // imutável fora dos fluxos de estoque (StockService/venda/cancelamento).
+        UpdateProductRequest request = new UpdateProductRequest(
+                "Novo nome", null, "SKU-1", null,
+                BigDecimal.TEN, BigDecimal.valueOf(25), 2, 1L);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(categoria()));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProductResponse response = productService.update(1L, request);
+
+        assertThat(response.stock()).isEqualTo(5);
+        assertThat(existente.getStock()).isEqualTo(5);
+    }
+
+    @Test
     void update_deveLancarBusinessException_quandoNovoSkuJaPertenceAOutroProduto() {
         Product existente = Product.builder()
                 .id(1L).sku("SKU-1")
@@ -127,7 +152,7 @@ class ProductServiceTest {
 
         UpdateProductRequest request = new UpdateProductRequest(
                 "Nome", null, "SKU-2", null,
-                BigDecimal.TEN, BigDecimal.valueOf(20), 5, 1, 1L);
+                BigDecimal.TEN, BigDecimal.valueOf(20), 1, 1L);
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(existente));
         when(productRepository.existsBySku("SKU-2")).thenReturn(true);

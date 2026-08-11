@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -88,7 +89,10 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
 
-        user.setRoles(Set.of(role));
+        // Set.of(role) é imutável — o save()/merge do JPA tenta clear() na
+        // coleção e lança UnsupportedOperationException. Usa-se um HashSet
+        // mutável para o merge funcionar em update (bug pré-existente).
+        user.setRoles(new HashSet<>(Set.of(role)));
 
         userRepository.save(user);
 

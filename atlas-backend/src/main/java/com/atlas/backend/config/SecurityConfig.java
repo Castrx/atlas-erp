@@ -40,8 +40,10 @@ public class SecurityConfig {
                 )
 
                 .exceptionHandling(exception -> exception
+                        // Mensagem fixa e genérica — não expõe o detalhe interno
+                        // do framework (authException.getMessage()) ao cliente.
                         .authenticationEntryPoint((request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage()))
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Não autenticado."))
                 )
 
                 .userDetailsService(userDetailsService)

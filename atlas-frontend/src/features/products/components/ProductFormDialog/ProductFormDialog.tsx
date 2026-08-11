@@ -123,7 +123,9 @@ export function ProductFormDialog({
       barcode: values.barcode || undefined,
       costPrice: Number(values.costPrice),
       salePrice: Number(values.salePrice),
-      stock: values.stock ? Number(values.stock) : undefined,
+      // M4: estoque é imutável no update — só o create envia o estoque inicial;
+      // no edit o campo fica desabilitado e não entra no payload do PUT.
+      stock: isEditing ? undefined : values.stock ? Number(values.stock) : undefined,
       minimumStock: values.minimumStock ? Number(values.minimumStock) : undefined,
       categoryId: Number(values.categoryId),
     };
@@ -226,8 +228,9 @@ export function ProductFormDialog({
               <TextField
                 label="Estoque inicial"
                 {...register("stock")}
+                disabled={isEditing}
                 error={!!errors.stock}
-                helperText={errors.stock?.message}
+                helperText={isEditing ? "Alterações de estoque são feitas por movimentações." : errors.stock?.message}
                 fullWidth
               />
 

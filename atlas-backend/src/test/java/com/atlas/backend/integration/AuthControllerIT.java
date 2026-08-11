@@ -51,7 +51,30 @@ class AuthControllerIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Já existe um usuário com este e-mail."));
+                .andExpect(jsonPath("$.message").value("Não foi possível concluir o registro. Verifique os dados e tente novamente."));
+    }
+
+    @Test
+    void register_deveRetornar400_quandoSenhaCurta() throws Exception {
+        RegisterRequest request = new RegisterRequest(
+                "Usuário de Teste", TestDataFactory.uniqueEmail(), "curta", "USER");
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void login_deveRetornar401_quandoSenhaCurta() throws Exception {
+        // A política mínima não se aplica ao login: senha curta deve dar 401
+        // (credenciais inválidas), nunca 400 (validação de corpo).
+        LoginRequest request = new LoginRequest(TestDataFactory.uniqueEmail(), "curta");
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -127,6 +150,19 @@ class AuthControllerIT extends AbstractIntegrationTest {
     void rotaProtegida_deveRetornar401_semToken() throws Exception {
         mockMvc.perform(get("/products"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rotaProtegida_deveRetornar401_semVazarMensagemInternaDoFramework() throws Exception {
+        String responseBody = mockMvc.perform(get("/products"))
+                .andExpect(status().isUnauthorized())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // O entry point usa texto fixo/genérico — a mensagem do framework
+        // ("Full authentication is required...") não pode vazar no corpo.
+        assertThat(responseBody).doesNotContain("authentication");
     }
 
     @Test
