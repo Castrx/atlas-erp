@@ -6,14 +6,21 @@ import com.atlas.backend.service.SaleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Vendas - registro e consulta são operação do dia a dia (USER e ADMIN).
+ * Cancelamento é ADMIN-only por ser reversão financeira (matriz de
+ * permissões em docs/architecture.md).
+ */
 @RestController
 @RequestMapping("/sales")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('USER','ADMIN')")
 public class SaleController {
 
     private final SaleService saleService;
@@ -50,6 +57,7 @@ public class SaleController {
 
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> cancel(
             @PathVariable Long id,

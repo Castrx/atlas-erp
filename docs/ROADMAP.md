@@ -71,6 +71,18 @@ Primeira cobertura real de testes do projeto, nos dois lados, em duas frentes se
 - Testado ponta a ponta: `mvn test` (47/47, inclusive com o Postgres de desenvolvimento propositalmente parado, provando isolamento), `mvn package`, `npm run build`, `npm run lint`, `npm run test` (13/13) — todos limpos, sem regressão.
 - Avança os itens `AE-060` e `AE-061` do backlog (cobertura inicial estabelecida; não é 100% do sistema — `Sale`, `Stock`, `Company`, `User` continuam sem teste, por não terem UI ainda).
 
+### Sprint 7A — RBAC: backend
+Aplica autorização por papel (`ADMIN`/`USER`) em todos os endpoints do backend — antes disso, qualquer usuário autenticado, independente do papel, acessava qualquer endpoint. Só backend; reflexo no frontend fica para a Sprint 7B.
+
+- **Estratégia**: `@PreAuthorize` explícito por endpoint, com `hasAnyAuthority('USER','ADMIN')` ou `hasAuthority('ADMIN')` — nunca `hasRole` (as roles são persistidas sem prefixo `ROLE_`, e `hasRole` procuraria por `ROLE_ADMIN`/`ROLE_USER`, que não existem) — e sem `RoleHierarchy` (ADMIN não herda USER implicitamente; cada endpoint de USER declara os dois papéis explicitamente, para ficar auditável direto no controller). Matriz completa de permissões documentada em [architecture.md](architecture.md#autorização-por-papel-rbac).
+- **`UserController`/`CompanyController`**: `ADMIN`-only, anotação de classe. **`CustomerController`/`ProductController`/`SaleController`**: USER+ADMIN por padrão, com override `ADMIN`-only nos métodos sensíveis (exclusão, cancelamento). **`CategoryController`**: leitura USER+ADMIN, escrita `ADMIN`-only. **`StockController`/`DashboardController`**: USER+ADMIN, sem exceção.
+- **`AccessDeniedException` → 403**: bug real encontrado e corrigido no caminho — sem handler específico no `GlobalExceptionHandler`, a negação de `@PreAuthorize` caía no handler genérico de `Exception` e virava `500`.
+- **Auto-registro nunca cria ADMIN**: `POST /auth/register` passou a ignorar por completo o campo `role` do corpo da requisição e sempre atribuir `USER` — mesmo que o cliente peça `role: "ADMIN"` explicitamente. Validado com teste automatizado e manualmente via `curl` (registro pedindo ADMIN, usuário criado confirmado como USER direto no banco).
+- **Gap conhecido, registrado como dívida técnica (`AE-045`), não resolvido nesta sprint**: não existe mais nenhum caminho — público ou administrativo — para provisionar o primeiro ADMIN de uma instalação nova (`POST /auth/register` só cria USER, `POST /users` é `ADMIN`-only). Bloqueia qualquer deploy do zero até ser endereçado.
+- 32 novos testes de integração/unitário cobrindo `403` (negado) e `200`/`2xx` (permitido) para cada célula da matriz, nos dois papéis — total: 79 testes (era 47).
+- Testado ponta a ponta: `mvn test` (79/79), validação manual via `curl` com usuário USER real e ADMIN real cobrindo toda a matriz, incluindo confirmação de que o token do USER continua válido após receber `403` (sem logout forçado).
+- Fecha o item `AE-040` do backlog. `AE-041` (reflexo no frontend) fica para a Sprint 7B.
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.
@@ -82,7 +94,7 @@ Resolver (implementar ou remover, com decisão explícita para cada caso) os ite
 Construir a interface para os módulos que já existem no backend mas não têm UI: Produtos, Clientes, Categorias, Estoque, Vendas. Cada módulo segue o padrão de feature já estabelecido (`features/<módulo>/{pages,components,services}`).
 
 ### Marco D — Autorização por papel (RBAC)
-Aplicar `@PreAuthorize` nos endpoints do backend de acordo com os papéis `ADMIN`/`USER` (hoje emitidos no token mas não verificados), e refletir isso na UI (ocultar/desabilitar ações conforme permissão).
+Backend concluído na Sprint 7A. Falta: Sprint 7B — refletir as permissões na UI (ocultar/desabilitar ações conforme papel, decodificando o claim `roles` já presente no JWT), sempre como reforço de UX, nunca como mecanismo de segurança (a autorização real já está no backend).
 
 ### Marco E — Multi-tenancy (Empresa)
 Vincular `User`, `Product`, `Customer` e demais entidades a `Company`, e aplicar esse escopo em todas as consultas — pré-requisito para qualquer uso realista com mais de uma empresa cadastrada.

@@ -61,12 +61,41 @@ Fluxo completo documentado em [SECURITY.md](SECURITY.md). Resumo: login stateles
 | Exceção | Status HTTP |
 |---|---|
 | `BadCredentialsException` | 401 |
+| `AccessDeniedException` (`@PreAuthorize` negado) | 403 |
 | `ResourceNotFoundException` | 404 |
 | `BusinessException` | 409 |
 | `MethodArgumentNotValidException` (Bean Validation) | 400 |
 | Qualquer outra `Exception` | 500 |
 
-Não há autorização por papel (`@PreAuthorize`) aplicada em nenhum endpoint hoje, apesar de `@EnableMethodSecurity` estar habilitado e dos papéis `ADMIN`/`USER` existirem na base — **gap conhecido**, ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md).
+### Autorização por papel (RBAC)
+
+Desde a Sprint 7A, todo endpoint tem `@PreAuthorize` explícito (`hasAuthority('ADMIN')` ou `hasAnyAuthority('USER','ADMIN')`) — nenhum depende implicitamente só de `anyRequest().authenticated()`. Decisões de desenho:
+
+- **`hasAuthority`, nunca `hasRole`**: as roles são persistidas sem prefixo `ROLE_` (`ADMIN`, `USER` — ver migration `V8`), e `hasRole('ADMIN')` do Spring Security procuraria por `ROLE_ADMIN`, que não existe. Usar `hasRole` aqui quebraria silenciosamente todo o RBAC.
+- **Sem `RoleHierarchy`**: ADMIN não herda USER automaticamente por hierarquia implícita — cada endpoint aberto a USER declara `hasAnyAuthority('USER','ADMIN')` explicitamente. Mais verboso, mas auditável lendo o controller, sem "mágica" escondida em configuração.
+- **`AccessDeniedException` → 403**: adicionado ao `GlobalExceptionHandler` nesta sprint — sem esse handler explícito, a negação de `@PreAuthorize` caía no handler genérico de `Exception` (500), o que mascarava um 403 real como erro de servidor.
+
+Matriz de permissões:
+
+| Endpoint / funcionalidade | USER | ADMIN |
+|---|:---:|:---:|
+| `POST /auth/register`, `POST /auth/login` | 🌐 Público | 🌐 Público |
+| `/users/**` (gestão de usuários) | ❌ | ✅ |
+| `/companies/**` (dados da empresa) | ❌ | ✅ |
+| `GET/POST/PUT /customers` | ✅ | ✅ |
+| `DELETE /customers/{id}` | ❌ | ✅ |
+| `GET/POST/PUT /products` | ✅ | ✅ |
+| `DELETE /products/{id}` | ❌ | ✅ |
+| `GET /categories` | ✅ | ✅ |
+| `POST/PUT/DELETE /categories` | ❌ | ✅ |
+| `GET/POST /sales` | ✅ | ✅ |
+| `DELETE /sales/{id}` (cancelar) | ❌ | ✅ |
+| `/stock/**` (entrada/saída/histórico) | ✅ | ✅ |
+| `GET /dashboard` | ✅ | ✅ |
+
+**Auto-registro sempre cria USER.** `POST /auth/register` ignora o campo `role` do corpo da requisição — mesmo enviando `role: "ADMIN"`, o usuário criado é sempre `USER` (`AuthenticationService.SELF_REGISTER_ROLE`). Criar ou promover um ADMIN só é possível via `POST /users`, que já é `ADMIN`-only — ou seja, **é preciso já ter um ADMIN para criar outro**. **Gap conhecido, sem solução nesta sprint**: não existe hoje nenhum caminho (migration seed, script, endpoint) para provisionar o primeiro ADMIN de uma instalação nova do zero — precisa ser resolvido antes de qualquer deploy real (ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md)).
+
+O frontend (Sprint 7B) só vai **refletir** essas permissões para UX (esconder/desabilitar ação que o usuário não pode fazer) — a autorização real é sempre o `@PreAuthorize` do backend; o frontend nunca é o mecanismo de segurança.
 
 ### Testes automatizados (`src/test/`)
 

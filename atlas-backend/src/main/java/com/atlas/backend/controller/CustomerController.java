@@ -6,13 +6,19 @@ import com.atlas.backend.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Clientes - operação do dia a dia, aberta a USER e ADMIN. Exclusão
+ * (inativação) é ADMIN-only (matriz de permissões em docs/architecture.md).
+ */
 @RestController
 @RequestMapping("/customers")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('USER','ADMIN')")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -48,6 +54,7 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.update(id, request));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id

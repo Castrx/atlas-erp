@@ -7,13 +7,19 @@ import com.atlas.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Gestão de usuários do sistema - exclusiva de ADMIN (matriz de permissões
+ * em docs/architecture.md). Nenhum endpoint aqui é acessível a USER.
+ */
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')")
 public class UserController {
 
     private final UserService service;

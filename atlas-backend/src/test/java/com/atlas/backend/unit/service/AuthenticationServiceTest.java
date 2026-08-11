@@ -73,17 +73,24 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void register_deveLancarBusinessException_quandoPerfilNaoExiste() {
-        RegisterRequest request = new RegisterRequest("Nome", "novo@teste.local", "senha123", "INEXISTENTE");
+    void register_deveIgnorarRoleDoRequestEBuscarSempreUSER_mesmoTentandoADMIN() {
+        // RBAC (Sprint 7A): auto-registro público nunca deve criar ADMIN,
+        // mesmo que o cliente envie role="ADMIN" no corpo da requisição.
+        RegisterRequest request = new RegisterRequest("Nome", "novo@teste.local", "senha123", "ADMIN");
+        Role roleUser = Role.builder().id(2L).name("USER").build();
 
         when(userRepository.existsByEmail("novo@teste.local")).thenReturn(false);
-        when(roleRepository.findByName("INEXISTENTE")).thenReturn(Optional.empty());
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(roleUser));
+        when(passwordEncoder.encode("senha123")).thenReturn("senha-codificada");
+        when(userMapper.toResponse(any(User.class)))
+                .thenReturn(UserResponse.builder().id(1L).name("Nome").email("novo@teste.local").build());
 
-        assertThatThrownBy(() -> authenticationService.register(request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Perfil não encontrado.");
+        authenticationService.register(request);
 
-        verify(userRepository, never()).save(any());
+        // Nunca deve consultar a role "ADMIN" enviada no request - só "USER".
+        verify(roleRepository, never()).findByName("ADMIN");
+        verify(userRepository).save(argThat((User user) ->
+                user.getRoles().size() == 1 && user.getRoles().contains(roleUser)));
     }
 
     @Test

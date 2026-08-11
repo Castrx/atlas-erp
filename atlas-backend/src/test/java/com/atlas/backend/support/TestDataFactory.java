@@ -2,8 +2,11 @@ package com.atlas.backend.support;
 
 import com.atlas.backend.dto.auth.LoginRequest;
 import com.atlas.backend.dto.auth.RegisterRequest;
+import com.atlas.backend.dto.category.CreateCategoryRequest;
+import com.atlas.backend.dto.company.CreateCompanyRequest;
 import com.atlas.backend.dto.customer.CustomerRequest;
 import com.atlas.backend.dto.product.CreateProductRequest;
+import com.atlas.backend.dto.user.CreateUserRequest;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -68,5 +71,33 @@ public final class TestDataFactory {
                 "51999999999",
                 document
         );
+    }
+
+    /**
+     * CNPJ de teste com exatamente 14 dígitos numéricos, único o bastante
+     * para não colidir entre execuções (não precisa ser um CNPJ
+     * matematicamente válido — o backend só valida o formato).
+     */
+    public static String uniqueCnpj() {
+        String digits = UUID.randomUUID().toString().replaceAll("\\D", "");
+        return (digits + "00000000000000").substring(0, 14);
+    }
+
+    public static CreateCompanyRequest createCompanyRequest(String cnpj) {
+        return new CreateCompanyRequest(
+                "Razão Social de Teste Ltda",
+                "Nome Fantasia de Teste",
+                cnpj,
+                "empresa-" + UUID.randomUUID() + "@teste.local",
+                "5133334444"
+        );
+    }
+
+    public static CreateCategoryRequest createCategoryRequest(String name) {
+        return new CreateCategoryRequest(name, "Categoria de teste");
+    }
+
+    public static CreateUserRequest createUserRequest(String email, String role) {
+        return new CreateUserRequest("Usuário via API", email, DEFAULT_PASSWORD, role);
     }
 }

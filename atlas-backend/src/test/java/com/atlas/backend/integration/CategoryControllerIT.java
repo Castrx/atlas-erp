@@ -1,0 +1,73 @@
+package com.atlas.backend.integration;
+
+import com.atlas.backend.dto.category.CreateCategoryRequest;
+import com.atlas.backend.entity.Category;
+import com.atlas.backend.support.AbstractIntegrationTest;
+import com.atlas.backend.support.TestDataFactory;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * RBAC (Sprint 7A): leitura de categorias é aberta a USER e ADMIN (usada
+ * no cadastro de Produtos); escrita é ADMIN-only — matriz de permissões
+ * em docs/architecture.md.
+ */
+class CategoryControllerIT extends AbstractIntegrationTest {
+
+    @Test
+    void findAll_deveRetornar200_paraUSER() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+
+        mockMvc.perform(get("/categories").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void create_deveRetornar403_paraUSER() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+        CreateCategoryRequest request = TestDataFactory.createCategoryRequest("Categoria " + TestDataFactory.uniqueSku());
+
+        mockMvc.perform(post("/categories")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void create_deveRetornar201_paraADMIN() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        CreateCategoryRequest request = TestDataFactory.createCategoryRequest("Categoria " + TestDataFactory.uniqueSku());
+
+        mockMvc.perform(post("/categories")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void delete_deveRetornar403_paraUSER() throws Exception {
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+
+        mockMvc.perform(delete("/categories/" + category.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_deveRetornar204_paraADMIN() throws Exception {
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+
+        mockMvc.perform(delete("/categories/" + category.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+    }
+}

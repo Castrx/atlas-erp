@@ -2,12 +2,14 @@ package com.atlas.backend.integration;
 
 import com.atlas.backend.dto.product.CreateProductRequest;
 import com.atlas.backend.entity.Category;
+import com.atlas.backend.entity.Product;
 import com.atlas.backend.support.AbstractIntegrationTest;
 import com.atlas.backend.support.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -115,5 +117,42 @@ class ProductControllerIT extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(request.sku())));
+    }
+
+    // --- RBAC (Sprint 7A) ---
+
+    @Test
+    void create_deveRetornar201_paraUSER() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        CreateProductRequest request = TestDataFactory.createProductRequest(TestDataFactory.uniqueSku(), category.getId());
+
+        mockMvc.perform(post("/products")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void delete_deveRetornar403_paraUSER() throws Exception {
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product product = persistProduct(TestDataFactory.uniqueSku(), category, 5);
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+
+        mockMvc.perform(delete("/products/" + product.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_deveRetornar204_paraADMIN() throws Exception {
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product product = persistProduct(TestDataFactory.uniqueSku(), category, 5);
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+
+        mockMvc.perform(delete("/products/" + product.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
     }
 }

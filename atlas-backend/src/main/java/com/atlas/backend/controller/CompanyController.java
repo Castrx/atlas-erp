@@ -8,13 +8,19 @@ import com.atlas.backend.service.CompanyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Dados da empresa - exclusivo de ADMIN (matriz de permissões em
+ * docs/architecture.md). Nenhum endpoint aqui é acessível a USER.
+ */
 @RestController
 @RequestMapping("/companies")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')")
 public class CompanyController {
 
     private final CompanyService service;

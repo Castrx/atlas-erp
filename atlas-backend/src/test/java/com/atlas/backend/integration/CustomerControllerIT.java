@@ -1,12 +1,14 @@
 package com.atlas.backend.integration;
 
 import com.atlas.backend.dto.customer.CustomerRequest;
+import com.atlas.backend.entity.Customer;
 import com.atlas.backend.support.AbstractIntegrationTest;
 import com.atlas.backend.support.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -93,5 +95,39 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(request.document())));
+    }
+
+    // --- RBAC (Sprint 7A) ---
+
+    @Test
+    void create_deveRetornar200_paraUSER() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+        CustomerRequest request = TestDataFactory.customerRequest(TestDataFactory.uniqueDocument());
+
+        mockMvc.perform(post("/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void delete_deveRetornar403_paraUSER() throws Exception {
+        Customer customer = persistCustomer(TestDataFactory.uniqueDocument());
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "USER");
+
+        mockMvc.perform(delete("/customers/" + customer.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void delete_deveRetornar204_paraADMIN() throws Exception {
+        Customer customer = persistCustomer(TestDataFactory.uniqueDocument());
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+
+        mockMvc.perform(delete("/customers/" + customer.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
     }
 }

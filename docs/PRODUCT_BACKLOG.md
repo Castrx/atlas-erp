@@ -39,11 +39,12 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
-| AE-040 | Aplicar `@PreAuthorize` por papel (`ADMIN`/`USER`) nos endpoints que hoje não diferenciam acesso | backend | 🔴 | todo |
-| AE-041 | Refletir permissões por papel na UI (ocultar/desabilitar ações) | frontend | 🟡 | todo |
+| AE-040 | Aplicar `@PreAuthorize` por papel (`ADMIN`/`USER`) nos endpoints que hoje não diferenciam acesso — ver Sprint 7A no [Roadmap](ROADMAP.md) | backend | 🔴 | concluído |
+| AE-041 | Refletir permissões por papel na UI (ocultar/desabilitar ações) — backend já pronto (Sprint 7A), UI pendente (Sprint 7B) | frontend | 🟡 | todo |
 | AE-042 | Avaliar estratégia de refresh token / revogação de sessão | backend | 🟡 | todo |
 | AE-043 | Rate limiting em `/auth/login` | backend | 🟡 | todo |
 | AE-044 | Decodificar `exp` do JWT no frontend para detectar expiração antes da próxima chamada de API | frontend | 🟢 | todo |
+| AE-045 | Provisionar o primeiro usuário ADMIN de uma instalação nova — desde a Sprint 7A não há nenhum caminho (público ou administrativo) para isso: `POST /auth/register` só cria USER e `POST /users` é `ADMIN`-only | backend | 🔴 | todo |
 
 ## Multi-tenancy
 
@@ -57,7 +58,7 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
-| AE-060 | Testes automatizados de backend por módulo — cobertura inicial de Auth/Products/Customers/Dashboard entregue na Sprint 6A; faltam Sale, Stock, Company, User (sem UI ainda) | backend | 🟡 | em andamento |
+| AE-060 | Testes automatizados de backend por módulo — cobertura inicial de Auth/Products/Customers/Dashboard entregue na Sprint 6A; Sale/Stock/Company/User ganharam testes de integração de permissão na Sprint 7A (RBAC), mas ainda sem teste unitário de regra de negócio própria | backend | 🟡 | em andamento |
 | AE-061 | Testes automatizados de frontend — cobertura inicial (ProtectedRoute, ProductFormDialog, CustomerFormDialog, useProducts, useCustomers) entregue na Sprint 6A; faltam os demais componentes/hooks | frontend | 🟡 | em andamento |
 | AE-062 | Testes E2E cobrindo login/logout/rota protegida (validados manualmente na Sprint 1B) | frontend | 🟢 | todo |
 | AE-063 | Pipeline de CI (lint + build + testes em cada PR) | infra | 🔴 | todo |

@@ -2,6 +2,8 @@ package com.atlas.backend.integration;
 
 import com.atlas.backend.dto.auth.LoginRequest;
 import com.atlas.backend.dto.auth.RegisterRequest;
+import com.atlas.backend.entity.Role;
+import com.atlas.backend.entity.User;
 import com.atlas.backend.support.AbstractIntegrationTest;
 import com.atlas.backend.support.TestDataFactory;
 import org.junit.jupiter.api.Test;
@@ -53,14 +55,37 @@ class AuthControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void register_deveRetornar400_quandoPerfilInexistente() throws Exception {
-        RegisterRequest request = TestDataFactory.registerRequest(TestDataFactory.uniqueEmail(), "PERFIL_QUE_NAO_EXISTE");
+    void register_deveIgnorarTentativaDeRoleADMIN_eCriarUsuarioComoUSER() throws Exception {
+        // RBAC (Sprint 7A): auto-registro público nunca deve criar ADMIN,
+        // mesmo que o cliente peça explicitamente role="ADMIN".
+        String email = TestDataFactory.uniqueEmail();
+        RegisterRequest request = TestDataFactory.registerRequest(email, "ADMIN");
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Perfil não encontrado."));
+                .andExpect(status().isCreated());
+
+        // Confirma direto no banco: o usuário criado tem só a role USER.
+        User user = userRepository.findByEmail(email).orElseThrow();
+        assertThat(user.getRoles()).extracting(Role::getName).containsExactly("USER");
+
+        // Confirma pelo comportamento observável: o token desse usuário
+        // não tem acesso a um endpoint ADMIN-only.
+        LoginRequest loginRequest = TestDataFactory.loginRequest(email, TestDataFactory.DEFAULT_PASSWORD);
+
+        String responseBody = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = objectMapper.readTree(responseBody).get("token").asText();
+
+        mockMvc.perform(get("/users").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.atlas.backend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,27 @@ public class GlobalExceptionHandler {
                 HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(),
                 ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
+    /**
+     * RBAC (Sprint 7A): @PreAuthorize nega acesso lançando AccessDeniedException
+     * dentro do próprio dispatch da requisição - sem este handler, ela caía
+     * no genérico de Exception (500). Autenticado mas sem permissão sempre
+     * deve resultar em 403, nunca 500 nem deslogar o usuário.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiError handleAccessDenied(
+            AccessDeniedException ex,
+            HttpServletRequest request) {
+
+        return new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                "Você não tem permissão para executar esta ação.",
                 request.getRequestURI()
         );
     }

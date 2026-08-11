@@ -28,15 +28,22 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final UserMapper userMapper;
 
+    public static final String SELF_REGISTER_ROLE = "USER";
+
     public UserResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException("Já existe um usuário com este e-mail.");
         }
 
-        Role role = roleRepository.findByName(request.role())
+        // Auto-registro público sempre cria USER - o cliente não escolhe
+        // nem promove a ADMIN por aqui, mesmo enviando outro valor em
+        // request.role() (o campo é aceito mas ignorado, de propósito).
+        // Criar/promover ADMIN é uma ação administrativa (POST /users,
+        // ADMIN-only), nunca parte do fluxo público de registro.
+        Role role = roleRepository.findByName(SELF_REGISTER_ROLE)
                 .orElseThrow(() ->
-                        new BusinessException("Perfil não encontrado."));
+                        new BusinessException("Perfil padrão não encontrado."));
 
         User user = User.builder()
                 .name(request.name())

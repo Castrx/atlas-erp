@@ -7,13 +7,19 @@ import com.atlas.backend.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Produtos - operação do dia a dia, aberta a USER e ADMIN. Exclusão é
+ * ADMIN-only (matriz de permissões em docs/architecture.md).
+ */
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('USER','ADMIN')")
 public class ProductController {
 
     private final ProductService productService;
@@ -42,6 +48,7 @@ public class ProductController {
         return productService.update(id, request);
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

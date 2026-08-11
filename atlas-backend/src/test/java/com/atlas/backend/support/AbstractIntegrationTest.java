@@ -2,17 +2,29 @@ package com.atlas.backend.support;
 
 import com.atlas.backend.dto.auth.LoginResponse;
 import com.atlas.backend.entity.Category;
+import com.atlas.backend.entity.Customer;
+import com.atlas.backend.entity.Product;
+import com.atlas.backend.entity.Role;
+import com.atlas.backend.entity.User;
 import com.atlas.backend.repository.CategoryRepository;
+import com.atlas.backend.repository.CustomerRepository;
+import com.atlas.backend.repository.ProductRepository;
+import com.atlas.backend.repository.RoleRepository;
+import com.atlas.backend.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
+
+import java.math.BigDecimal;
+import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -66,19 +78,40 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected CategoryRepository categoryRepository;
 
+    @Autowired
+    protected CustomerRepository customerRepository;
+
+    @Autowired
+    protected ProductRepository productRepository;
+
+    @Autowired
+    protected UserRepository userRepository;
+
+    @Autowired
+    protected RoleRepository roleRepository;
+
+    @Autowired
+    protected PasswordEncoder passwordEncoder;
+
     /**
-     * Registra um usuário novo e faz login, retornando o JWT pronto para uso
-     * no header {@code Authorization} das requisições que testam rotas
-     * protegidas. Reutilizado por todos os testes de integração que
-     * precisam de um usuário autenticado — nenhum reimplementa o fluxo.
+     * Registra um usuário novo (papel USER, único caminho público desde a
+     * Sprint 7A - RBAC) ou provisiona um ADMIN direto via repository
+     * (não há caminho público para isso, de propósito), faz login, e
+     * retorna o JWT pronto para uso no header {@code Authorization}.
+     * Reutilizado por todos os testes de integração que precisam de um
+     * usuário autenticado — nenhum reimplementa o fluxo.
      */
     protected String registerAndLogin(String email, String role) throws Exception {
 
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                TestDataFactory.registerRequest(email, role))))
-                .andExpect(status().isCreated());
+        if ("ADMIN".equals(role)) {
+            persistAdminUser(email, TestDataFactory.DEFAULT_PASSWORD);
+        } else {
+            mockMvc.perform(post("/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(
+                                    TestDataFactory.registerRequest(email, role))))
+                    .andExpect(status().isCreated());
+        }
 
         String responseBody = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,6 +126,30 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
+     * Cria um usuário ADMIN direto via repository, ignorando a API. Desde
+     * a Sprint 7A não existe caminho público para isso — {@code POST
+     * /auth/register} sempre cria USER, e {@code POST /users} é
+     * ADMIN-only (quem cria o primeiro ADMIN do sistema é uma decisão de
+     * provisionamento fora desta sprint, ver ressalva no relatório da
+     * Sprint 7A). Este helper simula esse "primeiro ADMIN" só para teste.
+     */
+    protected User persistAdminUser(String email, String password) {
+
+        Role adminRole = roleRepository.findByName("ADMIN")
+                .orElseThrow(() -> new IllegalStateException(
+                        "Role ADMIN não encontrada — migration V8 não rodou?"));
+
+        User user = User.builder()
+                .name("Admin de Teste")
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .roles(Set.of(adminRole))
+                .build();
+
+        return userRepository.save(user);
+    }
+
+    /**
      * Persiste uma categoria válida direto via repository — atalho de setup
      * para testes de Produto, que exigem uma categoria existente.
      */
@@ -104,5 +161,38 @@ public abstract class AbstractIntegrationTest {
                 .build();
 
         return categoryRepository.save(category);
+    }
+
+    /**
+     * Persiste um cliente válido direto via repository — atalho de setup
+     * para testes de Venda, que exigem um cliente existente.
+     */
+    protected Customer persistCustomer(String document) {
+
+        Customer customer = Customer.builder()
+                .name("Cliente de Teste")
+                .document(document)
+                .build();
+
+        return customerRepository.save(customer);
+    }
+
+    /**
+     * Persiste um produto válido (com estoque) direto via repository —
+     * atalho de setup para testes de Venda e Estoque.
+     */
+    protected Product persistProduct(String sku, Category category, int stock) {
+
+        Product product = Product.builder()
+                .name("Produto de Teste")
+                .sku(sku)
+                .costPrice(new BigDecimal("10.00"))
+                .salePrice(new BigDecimal("20.00"))
+                .stock(stock)
+                .minimumStock(1)
+                .category(category)
+                .build();
+
+        return productRepository.save(product);
     }
 }
