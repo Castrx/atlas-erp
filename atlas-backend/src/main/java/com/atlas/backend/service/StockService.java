@@ -96,7 +96,7 @@ public class StockService {
 
     private Product findProduct(Long id) {
 
-        return productRepository.findById(id)
+        return productRepository.findByIdForUpdate(id)
                 .orElseThrow(() ->
                         new BusinessException("Produto não encontrado."));
     }

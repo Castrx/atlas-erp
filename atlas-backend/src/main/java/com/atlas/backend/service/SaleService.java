@@ -58,7 +58,7 @@ public class SaleService {
 
         for (SaleItemRequest itemRequest : request.items()) {
 
-            Product product = productRepository.findById(itemRequest.productId())
+            Product product = productRepository.findByIdForUpdate(itemRequest.productId())
                     .orElseThrow(() ->
                             new BusinessException("Produto não encontrado."));
 
@@ -155,7 +155,9 @@ public class SaleService {
 
         for (SaleItem item : items) {
 
-            Product product = item.getProduct();
+            Product product = productRepository.findByIdForUpdate(item.getProduct().getId())
+                    .orElseThrow(() ->
+                            new BusinessException("Produto não encontrado."));
 
             product.setStock(product.getStock() + item.getQuantity());
 
