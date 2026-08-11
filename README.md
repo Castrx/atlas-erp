@@ -2,7 +2,7 @@
 
 > Sistema ERP modular para pequenas e médias empresas — monorepo com **backend Spring Boot 3** (Java 21) e **frontend React 19** (TypeScript).
 
-O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoque, vendas, usuários e empresas, com autenticação JWT e controle de acesso por papel (RBAC). É um projeto de estudo/produção em evolução: a fundação (autenticação, RBAC, testes) e os módulos de Produtos e Clientes estão completos e validados de ponta a ponta.
+O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoque, vendas, usuários e empresas, com autenticação JWT e controle de acesso por papel (RBAC). É um projeto de portifólio em evolução: a fundação (autenticação, RBAC, testes) e os módulos de Produtos e Clientes estão completos e validados de ponta a ponta.
 
 ## Status do projeto
 
