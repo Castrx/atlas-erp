@@ -13,9 +13,11 @@ O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoq
 | Produtos — CRUD completo (listar, criar, editar, excluir) | ✅ Completo e testado |
 | Clientes — CRUD completo (exclusão = inativação) | ✅ Completo e testado |
 | Dashboard com dados reais (indicadores, gráfico, listas) | ✅ Funcional |
-| Categorias, Estoque, Vendas, Empresas, Usuários | ⚙️ Backend implementado — UI pendente |
+| Vendas — registro, listagem e cancelamento (ADMIN) | ✅ Completo e testado |
+| Estoque — entrada/saída e histórico paginado | ✅ Completo e testado |
+| Categorias, Empresas, Usuários | ⚙️ Backend implementado — UI pendente |
 | Multi-tenancy (Empresa) | 📋 Modelado no domínio, não aplicado |
-| Testes automatizados | ✅ 83 backend + 47 frontend |
+| Testes automatizados | ✅ 83 backend + 64 frontend |
 | CI/CD | ✅ Workflow configurado (lint + testes + build em cada PR) |
 | Containerização | ✅ Compose completo (postgres + backend + frontend + pgAdmin) |
 
@@ -28,7 +30,9 @@ Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md).
 - **Produtos**: CRUD completo com validação (Zod + backend), categoria obrigatória, estoque mínimo, erros de SKU duplicado exibidos na UI. Exclusão é física (`DELETE`).
 - **Clientes**: CRUD completo com CPF/CNPJ único, e-mail validado. Exclusão é **inativação** (`active = false`); a listagem e o métrico consideram apenas clientes ativos (decisão documentada — filtrar no backend é débito conhecido).
 - **Dashboard**: métricas reais (total de produtos/clientes, baixo estoque, vendas recentes, receita dos últimos 7 dias) com gráfico.
-- **Backend exposto**: categorias, estoque (movimentações), vendas (com itens e status), empresas e usuários têm endpoints implementados (parte sem UI ainda).
+- **Vendas**: registro com cliente + itens dinâmicos (produto e quantidade, total calculado pelo backend), listagem com total/data e cancelamento (ADMIN-only) que restaura o estoque.
+- **Estoque**: entrada e saída com motivo obrigatório, e histórico paginado (10/página) com tipo (Entrada/Saída), responsável e data.
+- **Backend exposto**: categorias, empresas e usuários têm endpoints implementados (parte sem UI ainda).
 
 ## Stack
 
@@ -151,7 +155,9 @@ Algumas capturas do estado atual (mais em [`docs/demo/`](docs/demo/)):
 
 ## Roadmap / limitações
 
-- Módulos sem UI ainda: Categorias, Estoque, Vendas, Empresas, Usuários (backends prontos).
+- Módulos sem UI ainda: Categorias, Empresas, Usuários (backends prontos).
+- Vendas sem paginação e sem listagem de vendas canceladas — o `GET /sales` retorna apenas as ativas.
+- Histórico de estoque sem filtro por produto.
 - Multi-tenancy modelado, não aplicado.
 - Filtrar clientes inativos no backend (hoje é feito no frontend).
 - Paginação/busca nas listagens.

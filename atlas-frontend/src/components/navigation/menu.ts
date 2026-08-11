@@ -49,10 +49,12 @@ export const menu: MenuItem[] = [
     {
         label: "Estoque",
         icon: Boxes,
+        path: "/estoque",
     },
     {
         label: "Vendas",
         icon: ShoppingCart,
+        path: "/vendas",
     },
     {
         label: "Usuários",

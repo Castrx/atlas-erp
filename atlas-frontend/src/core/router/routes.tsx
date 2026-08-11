@@ -4,6 +4,8 @@ import { MainLayout } from "../../layouts/MainLayout";
 import { DashboardPage } from "../../features/dashboard/pages";
 import { ProductsPage } from "../../features/products";
 import { CustomersPage } from "../../features/customers";
+import { VendasPage } from "../../features/vendas";
+import { EstoquePage } from "../../features/estoque";
 import { LoginPage } from "../../features/auth";
 import { ProtectedRoute } from "../auth";
 
@@ -40,6 +42,28 @@ export function AppRoutes() {
           <ProtectedRoute>
             <MainLayout>
               <CustomersPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/vendas"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <VendasPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/estoque"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <EstoquePage />
             </MainLayout>
           </ProtectedRoute>
         }

@@ -1,0 +1,1 @@
+export { StockHistoryTable } from "./StockHistoryTable";
