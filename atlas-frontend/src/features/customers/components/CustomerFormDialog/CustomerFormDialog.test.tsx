@@ -11,7 +11,7 @@ import type { Customer } from "../../types/customer.types";
 // exercitando o TanStack Query e o React Hook Form + Zod de verdade, só
 // sem bater na API real.
 vi.mock("../../services/customer.service", () => ({
-  customerService: { getAll: vi.fn(), create: vi.fn() },
+  customerService: { getAll: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
 }));
 
 describe("CustomerFormDialog", () => {
@@ -105,5 +105,57 @@ describe("CustomerFormDialog", () => {
     await waitFor(() =>
       expect(onError).toHaveBeenCalledWith("Já existe um cliente com este documento.")
     );
+  });
+
+  it("deve pré-preencher o formulário e enviar o payload de update, quando em modo edição", async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+
+    const clienteExistente: Customer = {
+      id: 3,
+      name: "Empresa Teste Ltda",
+      email: "contato@teste.local",
+      phone: "5133333333",
+      document: "12345678000199",
+      active: true,
+      createdAt: "2026-02-01T10:00:00",
+    };
+
+    const clienteAtualizado: Customer = { ...clienteExistente, name: "Empresa Teste Renomeada" };
+
+    vi.mocked(customerService.update).mockResolvedValue(clienteAtualizado);
+
+    render(
+      <CustomerFormDialog
+        open
+        customer={clienteExistente}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        onError={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Editar Cliente" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome")).toHaveValue("Empresa Teste Ltda");
+    expect(screen.getByLabelText("Documento (CPF/CNPJ)")).toHaveValue("12345678000199");
+
+    await user.clear(screen.getByLabelText("Nome"));
+    await user.type(screen.getByLabelText("Nome"), "Empresa Teste Renomeada");
+
+    await user.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() => expect(customerService.update).toHaveBeenCalled());
+
+    expect(vi.mocked(customerService.update).mock.calls[0]?.[0]).toBe(3);
+    expect(vi.mocked(customerService.update).mock.calls[0]?.[1]).toEqual({
+      name: "Empresa Teste Renomeada",
+      email: "contato@teste.local",
+      phone: "5133333333",
+      document: "12345678000199",
+    });
+
+    expect(onSuccess).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
   });
 });

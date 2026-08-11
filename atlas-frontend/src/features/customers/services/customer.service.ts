@@ -13,4 +13,14 @@ export const customerService = {
 
     return data;
   },
+
+  async update(id: number, input: CreateCustomerInput): Promise<Customer> {
+    const { data } = await api.put<Customer>(`${ENDPOINTS.CUSTOMERS}/${id}`, input);
+
+    return data;
+  },
+
+  async delete(id: number): Promise<void> {
+    await api.delete(`${ENDPOINTS.CUSTOMERS}/${id}`);
+  },
 };

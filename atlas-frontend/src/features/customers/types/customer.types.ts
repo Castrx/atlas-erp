@@ -13,6 +13,8 @@ export interface Customer {
 
 /**
  * Espelha com.atlas.backend.dto.customer.CustomerRequest (backend).
+ * O backend reutiliza o mesmo DTO para PUT /customers/{id} — este mesmo
+ * tipo é o payload de create e de update.
  */
 export interface CreateCustomerInput {
   name: string;

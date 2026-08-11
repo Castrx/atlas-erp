@@ -12,7 +12,9 @@ import {
   TextField,
 } from "@mui/material";
 
+import type { Customer } from "../../types/customer.types";
 import { useCreateCustomer } from "../../hooks/useCreateCustomer";
+import { useUpdateCustomer } from "../../hooks/useUpdateCustomer";
 
 const schema = z.object({
   name: z.string().trim().min(1, "O nome é obrigatório."),
@@ -35,8 +37,20 @@ const DEFAULT_VALUES: FormValues = {
   document: "",
 };
 
+/** Converte o cliente em valores de formulário (nulos viram string vazia). */
+function toFormValues(customer: Customer): FormValues {
+  return {
+    name: customer.name,
+    document: customer.document,
+    email: customer.email ?? "",
+    phone: customer.phone ?? "",
+  };
+}
+
 interface CustomerFormDialogProps {
   open: boolean;
+  /** Cliente em edição; ausente = modo criação. */
+  customer?: Customer | null;
   onClose: () => void;
   onSuccess: () => void;
   onError: (message: string) => void;
@@ -44,11 +58,15 @@ interface CustomerFormDialogProps {
 
 export function CustomerFormDialog({
   open,
+  customer,
   onClose,
   onSuccess,
   onError,
 }: CustomerFormDialogProps) {
+  const isEditing = customer !== null && customer !== undefined;
+
   const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
 
   const {
     register,
@@ -57,7 +75,7 @@ export function CustomerFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: isEditing ? toFormValues(customer) : DEFAULT_VALUES,
   });
 
   function handleClose() {
@@ -66,13 +84,19 @@ export function CustomerFormDialog({
   }
 
   async function onSubmit(values: FormValues) {
+    const payload = {
+      name: values.name,
+      email: values.email || undefined,
+      phone: values.phone || undefined,
+      document: values.document,
+    };
+
     try {
-      await createCustomer.mutateAsync({
-        name: values.name,
-        email: values.email || undefined,
-        phone: values.phone || undefined,
-        document: values.document,
-      });
+      if (isEditing && customer) {
+        await updateCustomer.mutateAsync({ id: customer.id, data: payload });
+      } else {
+        await createCustomer.mutateAsync(payload);
+      }
 
       reset(DEFAULT_VALUES);
       onClose();
@@ -94,7 +118,7 @@ export function CustomerFormDialog({
       maxWidth="sm"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>Novo Cliente</DialogTitle>
+        <DialogTitle>{isEditing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
 
         <DialogContent>
           <Stack

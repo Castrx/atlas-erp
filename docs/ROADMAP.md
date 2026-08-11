@@ -97,6 +97,18 @@ Reflete no frontend as permissões já aplicadas no backend na Sprint 7A — pur
 - **Achado honesto, não é bug**: hoje não existe nenhuma ação administrativa real na UI (sem tela de exclusão/edição em Produtos/Clientes/Vendas, sem páginas de Usuários/Empresas) — `RequireRole` e o `requiredRole` de `ProtectedRoute` foram testados com exemplos sintéticos no próprio teste, prontos para quando essas telas existirem.
 - Fecha o item `AE-041` do backlog — RBAC (Marco D) concluído nos dois lados.
 
+### Sprint 8A — Produtos e Clientes: edição e exclusão (frontend)
+Edição e exclusão de Produtos e Clientes na UI — o passo seguinte natural às Sprints 4A/4B (Produtos, listagem e cadastro) e 5A (Clientes). Escopo restrito ao frontend: o backend já tinha os endpoints (`PUT`/`DELETE`) e a autorização por papel (`@PreAuthorize`) desde a Sprint 7A — esta sprint só os consome.
+
+- **Edição**: `ProductFormDialog` e `CustomerFormDialog` ganharam o modo edição via prop opcional `product`/`customer` — pré-preenchem o formulário (números virando string, nulos virando string vazia) e o `onSubmit` troca `create` por `update` (`PUT /products/{id}` / `PUT /customers/{id}`), reutilizando o mesmo schema Zod do cadastro. Novos hooks `useUpdateProduct`/`useUpdateCustomer` invalidam a query da listagem via TanStack Query.
+- **Exclusão**: novo componente reutilizável `components/ui/ConfirmDialog` — genérico (título, mensagem, rótulos e cor do botão de confirmar configuráveis) com estado `confirming` que desabilita os dois botões durante a operação. Novos hooks `useDeleteProduct`/`useDeleteCustomer` chamam `DELETE` e invalidam a listagem.
+- **Reflexo de RBAC (UX)**: o botão "Excluir" só é renderizado para `ADMIN` (`hasRole("ADMIN")`), mesmo padrão da Sprint 7B — a autorização real continua no `@PreAuthorize` do backend (`DELETE` é ADMIN-only; `PUT`/`GET` são USER+ADMIN). USER consegue criar/editar, mas não vê "Excluir".
+- **Decisão de escopo — clientes inativos**: no backend, a exclusão de cliente é uma inativação (`active = false`) e o `GET /customers` retorna todos (ativos e inativos). Para o "Excluir" ter o efeito esperado na UI, a listagem e o métrico "Total de clientes" passaram a considerar apenas os clientes ativos, filtrando no **frontend** (`CustomersPage`, via `useMemo` sobre `data.filter(c => c.active)`). Filtrar no backend fica registrado como dívida (backlog). Em Produtos a exclusão é física (hard delete) — não há filtro análogo.
+- **Feedback**: snackbars de sucesso/erro em criar, atualizar e excluir; guard contra `clickaway` para o Snackbar não fechar instantaneamente quando o Dialog fica por cima.
+- **Testes**: 13 novos testes (total frontend 47, era 34) — ConfirmDialog, ProductsPage, CustomersPage e os modos de edição dos dois dialogs.
+- Testado ponta a ponta: `npm run build`, `npm run lint`, `npx vitest run` (47/47), `mvn test` (79/79, backend intocado) e navegador real via driver Puppeteer — checklist completo da sprint (30 verificações) verde, incluindo RBAC (USER não vê "Excluir"; `DELETE` direto retorna `403` sem derrubar a sessão), Dashboard intacto, console sem erros e limpeza dos dados de teste.
+- Fecha os itens `AE-030` (Produtos) e `AE-031` (Clientes) do backlog.
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.

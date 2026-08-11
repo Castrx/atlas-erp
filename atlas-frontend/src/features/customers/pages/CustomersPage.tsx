@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import axios from "axios";
 import { Plus, UserSearch, Users } from "lucide-react";
 import { Alert, Box, Button, Skeleton, Snackbar, Stack, Typography } from "@mui/material";
 
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { MetricCard } from "../../../components/ui/MetricCard";
+import { useAuth } from "../../../core/auth";
 import { CustomerFormDialog } from "../components/CustomerFormDialog";
 import { CustomersTable } from "../components/CustomersTable";
 import { useCustomers } from "../hooks/useCustomers";
+import { useDeleteCustomer } from "../hooks/useDeleteCustomer";
+import type { Customer } from "../types/customer.types";
 
 interface FeedbackState {
   open: boolean;
@@ -22,20 +27,66 @@ const INITIAL_FEEDBACK: FeedbackState = {
 
 export function CustomersPage() {
   const { data, isLoading, isError, refetch } = useCustomers();
+  const { hasRole } = useAuth();
+
+  const deleteCustomer = useDeleteCustomer();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(INITIAL_FEEDBACK);
 
-  function handleCreateSuccess() {
+  // A exclusão de cliente no backend é uma inativação (active = false) e o
+  // GET /customers retorna todos. Para o "Excluir" ter o efeito esperado na
+  // UI, a listagem e o métrico consideram apenas os ativos. (Decisão de
+  // escopo da Sprint 8A: filtrar aqui, no frontend; filtrar no backend fica
+  // como item de backlog.)
+  const activeCustomers = useMemo(() => data?.filter((c) => c.active) ?? [], [data]);
+
+  function openCreateDialog() {
+    setEditingCustomer(null);
+    setDialogOpen(true);
+  }
+
+  function handleDialogSuccess() {
     setFeedback({
       open: true,
-      message: "Cliente criado com sucesso.",
+      message: editingCustomer
+        ? "Cliente atualizado com sucesso."
+        : "Cliente criado com sucesso.",
       severity: "success",
     });
   }
 
-  function handleCreateError(message: string) {
+  function handleDialogError(message: string) {
     setFeedback({ open: true, message, severity: "error" });
+  }
+
+  async function handleConfirmDelete() {
+    if (!customerToDelete) {
+      return;
+    }
+
+    try {
+      await deleteCustomer.mutateAsync(customerToDelete.id);
+
+      setCustomerToDelete(null);
+      setFeedback({
+        open: true,
+        message: "Cliente excluído com sucesso.",
+        severity: "success",
+      });
+    } catch (err) {
+      setCustomerToDelete(null);
+      setFeedback({
+        open: true,
+        message:
+          axios.isAxiosError(err) && err.response?.data?.message
+            ? err.response.data.message
+            : "Não foi possível excluir o cliente. Tente novamente.",
+        severity: "error",
+      });
+    }
   }
 
   function closeFeedback(_event?: unknown, reason?: string) {
@@ -64,7 +115,7 @@ export function CustomersPage() {
         <Button
           variant="contained"
           startIcon={<Plus size={18} />}
-          onClick={() => setDialogOpen(true)}
+          onClick={openCreateDialog}
         >
           Novo Cliente
         </Button>
@@ -111,12 +162,12 @@ export function CustomersPage() {
           <Box sx={{ maxWidth: 280 }}>
             <MetricCard
               title="Total de clientes"
-              value={String(data.length)}
+              value={String(activeCustomers.length)}
               icon={<Users size={24} />}
             />
           </Box>
 
-          {data.length === 0 ? (
+          {activeCustomers.length === 0 ? (
             <Box
               sx={{
                 display: "flex",
@@ -153,16 +204,39 @@ export function CustomersPage() {
               </Typography>
             </Box>
           ) : (
-            <CustomersTable customers={data} />
+            <CustomersTable
+              customers={activeCustomers}
+              onEdit={(customer) => {
+                setEditingCustomer(customer);
+                setDialogOpen(true);
+              }}
+              onDelete={hasRole("ADMIN") ? (customer) => setCustomerToDelete(customer) : undefined}
+            />
           )}
         </Box>
       )}
 
       <CustomerFormDialog
+        key={editingCustomer?.id ?? "create"}
         open={dialogOpen}
+        customer={editingCustomer}
         onClose={() => setDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-        onError={handleCreateError}
+        onSuccess={handleDialogSuccess}
+        onError={handleDialogError}
+      />
+
+      <ConfirmDialog
+        open={customerToDelete !== null}
+        title="Excluir cliente"
+        message={
+          customerToDelete
+            ? `Deseja excluir "${customerToDelete.name}"? Essa ação não pode ser desfeita.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setCustomerToDelete(null)}
+        confirming={deleteCustomer.isPending}
       />
 
       <Snackbar

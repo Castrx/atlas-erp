@@ -18,6 +18,8 @@ export interface Product {
 
 /**
  * Espelha com.atlas.backend.dto.product.CreateProductRequest (backend).
+ * O UpdateProductRequest tem exatamente os mesmos campos — este mesmo
+ * tipo é reutilizado como payload de PUT /products/{id}.
  */
 export interface CreateProductInput {
   name: string;

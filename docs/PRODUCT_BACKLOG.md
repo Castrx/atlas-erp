@@ -27,8 +27,8 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
-| AE-030 | Fluxo de CRUD de Produtos — edição e exclusão (listagem e cadastro já implementados, ver Sprints 4A/4B no [Roadmap](ROADMAP.md)) | frontend | 🔴 | em andamento |
-| AE-031 | Tela e fluxo de CRUD de Clientes — edição e exclusão (listagem e cadastro já implementados, ver Sprint 5A no [Roadmap](ROADMAP.md)) | frontend | 🔴 | em andamento |
+| AE-030 | Fluxo de CRUD de Produtos — edição e exclusão (listagem e cadastro já implementados, ver Sprints 4A/4B no [Roadmap](ROADMAP.md)) — concluído na Sprint 8A | frontend | 🔴 | concluído |
+| AE-031 | Tela e fluxo de CRUD de Clientes — edição e exclusão (listagem e cadastro já implementados, ver Sprint 5A no [Roadmap](ROADMAP.md)) — concluído na Sprint 8A. Decisão: exclusão de cliente no backend é inativação (`active = false`) e `GET /customers` retorna todos; o filtro de inativos ficou no frontend (listagem e métrico consideram apenas `active`) — filtrar no backend fica como débito | frontend | 🔴 | concluído |
 | AE-032 | Tela e fluxo de CRUD de Categorias | frontend | 🟡 | todo |
 | AE-033 | Tela de movimentação de Estoque | frontend | 🟡 | todo |
 | AE-034 | Fluxo de registro de Vendas | frontend | 🔴 | todo |

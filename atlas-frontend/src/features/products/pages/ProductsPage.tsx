@@ -1,12 +1,17 @@
 import { useState } from "react";
+import axios from "axios";
 import { Package, PackageSearch, Plus } from "lucide-react";
 import { Alert, Box, Button, Skeleton, Snackbar, Stack, Typography } from "@mui/material";
 
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { MetricCard } from "../../../components/ui/MetricCard";
+import { useAuth } from "../../../core/auth";
 import { ProductFormDialog } from "../components/ProductFormDialog";
 import { ProductsTable } from "../components/ProductsTable";
+import { useDeleteProduct } from "../hooks/useDeleteProduct";
 import { useProducts } from "../hooks/useProducts";
+import type { Product } from "../types/product.types";
 
 interface FeedbackState {
   open: boolean;
@@ -22,20 +27,59 @@ const INITIAL_FEEDBACK: FeedbackState = {
 
 export function ProductsPage() {
   const { data, isLoading, isError, refetch } = useProducts();
+  const { hasRole } = useAuth();
+
+  const deleteProduct = useDeleteProduct();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(INITIAL_FEEDBACK);
 
-  function handleCreateSuccess() {
+  function openCreateDialog() {
+    setEditingProduct(null);
+    setDialogOpen(true);
+  }
+
+  function handleDialogSuccess() {
     setFeedback({
       open: true,
-      message: "Produto criado com sucesso.",
+      message: editingProduct
+        ? "Produto atualizado com sucesso."
+        : "Produto criado com sucesso.",
       severity: "success",
     });
   }
 
-  function handleCreateError(message: string) {
+  function handleDialogError(message: string) {
     setFeedback({ open: true, message, severity: "error" });
+  }
+
+  async function handleConfirmDelete() {
+    if (!productToDelete) {
+      return;
+    }
+
+    try {
+      await deleteProduct.mutateAsync(productToDelete.id);
+
+      setProductToDelete(null);
+      setFeedback({
+        open: true,
+        message: "Produto excluído com sucesso.",
+        severity: "success",
+      });
+    } catch (err) {
+      setProductToDelete(null);
+      setFeedback({
+        open: true,
+        message:
+          axios.isAxiosError(err) && err.response?.data?.message
+            ? err.response.data.message
+            : "Não foi possível excluir o produto. Tente novamente.",
+        severity: "error",
+      });
+    }
   }
 
   function closeFeedback(_event?: unknown, reason?: string) {
@@ -64,7 +108,7 @@ export function ProductsPage() {
         <Button
           variant="contained"
           startIcon={<Plus size={18} />}
-          onClick={() => setDialogOpen(true)}
+          onClick={openCreateDialog}
         >
           Novo Produto
         </Button>
@@ -153,16 +197,39 @@ export function ProductsPage() {
               </Typography>
             </Box>
           ) : (
-            <ProductsTable products={data} />
+            <ProductsTable
+              products={data}
+              onEdit={(product) => {
+                setEditingProduct(product);
+                setDialogOpen(true);
+              }}
+              onDelete={hasRole("ADMIN") ? (product) => setProductToDelete(product) : undefined}
+            />
           )}
         </Box>
       )}
 
       <ProductFormDialog
+        key={editingProduct?.id ?? "create"}
         open={dialogOpen}
+        product={editingProduct}
         onClose={() => setDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-        onError={handleCreateError}
+        onSuccess={handleDialogSuccess}
+        onError={handleDialogError}
+      />
+
+      <ConfirmDialog
+        open={productToDelete !== null}
+        title="Excluir produto"
+        message={
+          productToDelete
+            ? `Deseja excluir "${productToDelete.name}"? Essa ação não pode ser desfeita.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setProductToDelete(null)}
+        confirming={deleteProduct.isPending}
       />
 
       <Snackbar

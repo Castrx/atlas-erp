@@ -1,5 +1,6 @@
 import {
   Chip,
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -8,11 +9,16 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
+import { Pencil, Trash2 } from "lucide-react";
 
 import type { Product } from "../../types/product.types";
 
 interface ProductsTableProps {
   products: Product[];
+  /** Chamado ao clicar em editar. Se ausente, o botão Editar não é renderizado. */
+  onEdit?: (product: Product) => void;
+  /** Chamado ao clicar em excluir. Se ausente, o botão Excluir não é renderizado. */
+  onDelete?: (product: Product) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -22,9 +28,11 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 /**
  * Componente de apresentação puro: recebe os produtos prontos via prop,
- * não busca dados nem calcula nada além de formatação de exibição.
+ * não busca dados nem calcula nada além de formatação de exibição. As ações
+ * são repassadas por callback — quem decide exibi-las é a página (ex.: o
+ * botão Excluir só aparece para ADMIN).
  */
-export function ProductsTable({ products }: ProductsTableProps) {
+export function ProductsTable({ products, onEdit, onDelete }: ProductsTableProps) {
   return (
     <TableContainer
       component={Paper}
@@ -40,6 +48,9 @@ export function ProductsTable({ products }: ProductsTableProps) {
             <TableCell align="right">Preço</TableCell>
             <TableCell align="right">Estoque</TableCell>
             <TableCell align="center">Status</TableCell>
+            {(onEdit || onDelete) && (
+              <TableCell align="right">Ações</TableCell>
+            )}
           </TableRow>
         </TableHead>
 
@@ -61,6 +72,30 @@ export function ProductsTable({ products }: ProductsTableProps) {
                   variant="outlined"
                 />
               </TableCell>
+              {(onEdit || onDelete) && (
+                <TableCell align="right">
+                  {onEdit && (
+                    <IconButton
+                      aria-label={`Editar ${product.name}`}
+                      size="small"
+                      onClick={() => onEdit(product)}
+                    >
+                      <Pencil size={18} />
+                    </IconButton>
+                  )}
+
+                  {onDelete && (
+                    <IconButton
+                      aria-label={`Excluir ${product.name}`}
+                      size="small"
+                      color="error"
+                      onClick={() => onDelete(product)}
+                    >
+                      <Trash2 size={18} />
+                    </IconButton>
+                  )}
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

@@ -13,8 +13,10 @@ import {
   TextField,
 } from "@mui/material";
 
+import type { Product } from "../../types/product.types";
 import { useCategories } from "../../hooks/useCategories";
 import { useCreateProduct } from "../../hooks/useCreateProduct";
+import { useUpdateProduct } from "../../hooks/useUpdateProduct";
 
 const schema = z.object({
   name: z.string().trim().min(1, "O nome é obrigatório."),
@@ -60,8 +62,25 @@ const DEFAULT_VALUES: FormValues = {
   categoryId: "",
 };
 
+/** Converte o produto em valores de formulário (números viram string, como no create). */
+function toFormValues(product: Product): FormValues {
+  return {
+    name: product.name,
+    description: product.description ?? "",
+    sku: product.sku,
+    barcode: product.barcode ?? "",
+    costPrice: String(product.costPrice),
+    salePrice: String(product.salePrice),
+    stock: String(product.stock),
+    minimumStock: String(product.minimumStock),
+    categoryId: String(product.categoryId),
+  };
+}
+
 interface ProductFormDialogProps {
   open: boolean;
+  /** Produto em edição; ausente = modo criação. */
+  product?: Product | null;
   onClose: () => void;
   onSuccess: () => void;
   onError: (message: string) => void;
@@ -69,12 +88,16 @@ interface ProductFormDialogProps {
 
 export function ProductFormDialog({
   open,
+  product,
   onClose,
   onSuccess,
   onError,
 }: ProductFormDialogProps) {
+  const isEditing = product !== null && product !== undefined;
+
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
 
   const {
     register,
@@ -84,7 +107,7 @@ export function ProductFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: isEditing ? toFormValues(product) : DEFAULT_VALUES,
   });
 
   function handleClose() {
@@ -93,18 +116,24 @@ export function ProductFormDialog({
   }
 
   async function onSubmit(values: FormValues) {
+    const payload = {
+      name: values.name,
+      description: values.description || undefined,
+      sku: values.sku,
+      barcode: values.barcode || undefined,
+      costPrice: Number(values.costPrice),
+      salePrice: Number(values.salePrice),
+      stock: values.stock ? Number(values.stock) : undefined,
+      minimumStock: values.minimumStock ? Number(values.minimumStock) : undefined,
+      categoryId: Number(values.categoryId),
+    };
+
     try {
-      await createProduct.mutateAsync({
-        name: values.name,
-        description: values.description || undefined,
-        sku: values.sku,
-        barcode: values.barcode || undefined,
-        costPrice: Number(values.costPrice),
-        salePrice: Number(values.salePrice),
-        stock: values.stock ? Number(values.stock) : undefined,
-        minimumStock: values.minimumStock ? Number(values.minimumStock) : undefined,
-        categoryId: Number(values.categoryId),
-      });
+      if (isEditing && product) {
+        await updateProduct.mutateAsync({ id: product.id, data: payload });
+      } else {
+        await createProduct.mutateAsync(payload);
+      }
 
       reset(DEFAULT_VALUES);
       onClose();
@@ -126,7 +155,7 @@ export function ProductFormDialog({
       maxWidth="sm"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>Novo Produto</DialogTitle>
+        <DialogTitle>{isEditing ? "Editar Produto" : "Novo Produto"}</DialogTitle>
 
         <DialogContent>
           <Stack
