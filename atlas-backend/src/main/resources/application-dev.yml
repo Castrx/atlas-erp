@@ -1,0 +1,13 @@
+# Perfil de desenvolvimento — loga o SQL gerado pelo Hibernate.
+#
+# O perfil padrão NÃO loga SQL (show-sql desativado no application.yml).
+# Ative este perfil explicitamente quando quiser inspecionar o SQL em dev:
+#   SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
+# A stack containerizada e os testes rodam sem este perfil, portanto não
+# logam SQL.
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true

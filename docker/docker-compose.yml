@@ -47,6 +47,9 @@ services:
       ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
       ADMIN_BOOTSTRAP_NAME: ${ADMIN_BOOTSTRAP_NAME:-Administrador}
+      # Dados de demonstração (Sprint P4) — default false/ausente = runner
+      # inerte. Defina DEMO_DATA=true no docker/.env apenas em ambiente de demo.
+      DEMO_DATA: ${DEMO_DATA:-false}
 
     ports:
       - "8080:8080"

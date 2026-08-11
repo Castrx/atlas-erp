@@ -9,11 +9,11 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
-| AE-001 | Remover ou consolidar `core/query/` (duplicata vazia de `core/providers/queryClient.ts`) | frontend | 🟡 | todo |
-| AE-002 | Remover ou consolidar `features/auth/services/auth.service.ts` (duplicata vazia; serviço real em `core/auth/services`) | frontend | 🟡 | todo |
-| AE-003 | Remover `features/dashboard/components/LoginForm/` (cópia obsoleta; o real está em `features/auth/components/LoginForm`) | frontend | 🟡 | todo |
-| AE-005 | Decidir destino do kit `Atlas*` (`Button`, `Input`, `Card`) — adotar nas telas ou remover | frontend | 🟢 | todo |
-| AE-006 | Remover arquivos de estilo vazios e sem uso (`Button/styles.ts`, `MainLayout/styles.ts`) | frontend | 🟢 | todo |
+| AE-001 | Remover ou consolidar `core/query/` (duplicata vazia de `core/providers/queryClient.ts`) — removido no fechamento do MVP | frontend | 🟡 | concluído |
+| AE-002 | Remover ou consolidar `features/auth/services/auth.service.ts` (duplicata vazia; serviço real em `core/auth/services`) — removido no fechamento do MVP | frontend | 🟡 | concluído |
+| AE-003 | Remover `features/dashboard/components/LoginForm/` (cópia obsoleta; o real está em `features/auth/components/LoginForm`) — removido no fechamento do MVP | frontend | 🟡 | concluído |
+| AE-005 | Decidir destino do kit `Atlas*` (`Button`, `Input`, `Card`) — decisão no fechamento do MVP: remover (nenhum uso no app) | frontend | 🟢 | concluído |
+| AE-006 | Remover arquivos de estilo vazios e sem uso (`Button/styles.ts`, `MainLayout/styles.ts`) — removidos no fechamento do MVP | frontend | 🟢 | concluído |
 
 ## Débito técnico (backend)
 
@@ -30,10 +30,16 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 | AE-030 | Fluxo de CRUD de Produtos — edição e exclusão (listagem e cadastro já implementados, ver Sprints 4A/4B no [Roadmap](ROADMAP.md)) — concluído na Sprint 8A | frontend | 🔴 | concluído |
 | AE-031 | Tela e fluxo de CRUD de Clientes — edição e exclusão (listagem e cadastro já implementados, ver Sprint 5A no [Roadmap](ROADMAP.md)) — concluído na Sprint 8A. Decisão: exclusão de cliente no backend é inativação (`active = false`) e `GET /customers` retorna todos; o filtro de inativos ficou no frontend (listagem e métrico consideram apenas `active`) — filtrar no backend fica como débito | frontend | 🔴 | concluído |
 | AE-032 | Tela e fluxo de CRUD de Categorias | frontend | 🟡 | todo |
-| AE-033 | Tela de movimentação de Estoque | frontend | 🟡 | todo |
-| AE-034 | Fluxo de registro de Vendas | frontend | 🔴 | todo |
+| AE-033 | Tela de movimentação de Estoque — concluído na sprint Vendas + Estoque (frontend) | frontend | 🟡 | concluído |
+| AE-034 | Fluxo de registro de Vendas — concluído na sprint Vendas + Estoque (frontend) | frontend | 🔴 | concluído |
 | AE-035 | Tela de gestão de Empresa (Company) | frontend | 🟢 | todo |
 | AE-036 | Tela de gestão de Usuários | frontend | 🟢 | todo |
+
+## Dados de demonstração
+
+| ID | Item | Área | Prioridade | Status |
+|---|---|---|---|---|
+| AE-065 | Dados de demonstração (Sprint P4): `DemoDataRunner` gated por `DEMO_DATA=true`, idempotente e não-destrutivo, criando empresa, categorias, produtos, clientes, vendas e movimentos de estoque | backend | 🟢 | concluído |
 
 ## Segurança e autorização
 
@@ -59,7 +65,7 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
 | AE-060 | Testes automatizados de backend por módulo — cobertura inicial de Auth/Products/Customers/Dashboard entregue na Sprint 6A; Sale/Stock/Company/User ganharam testes de integração de permissão na Sprint 7A (RBAC), mas ainda sem teste unitário de regra de negócio própria | backend | 🟡 | em andamento |
-| AE-061 | Testes automatizados de frontend — cobertura inicial (ProtectedRoute, ProductFormDialog, CustomerFormDialog, useProducts, useCustomers) entregue na Sprint 6A; faltam os demais componentes/hooks | frontend | 🟡 | em andamento |
+| AE-061 | Testes automatizados de frontend — cobertura inicial (ProtectedRoute, ProductFormDialog, CustomerFormDialog, useProducts, useCustomers) entregue na Sprint 6A; Vendas e Estoque ganharam testes na sprint de fechamento (páginas, diálogos e hooks); ainda faltam testes dedicados de alguns hooks de mutação | frontend | 🟡 | em andamento |
 | AE-062 | Testes E2E cobrindo login/logout/rota protegida (validados manualmente na Sprint 1B) | frontend | 🟢 | todo |
 | AE-063 | Pipeline de CI (lint + build + testes em cada PR) — workflow criado na Sprint P2 (`.github/workflows/ci.yml`); validação em PR real fica pendente de push | infra | 🔴 | em andamento |
 | AE-064 | Resolvido na Sprint P2: árvore de documentação granular (`docs/{architecture,backend,frontend,api,ui,engineering,roadmap}/`) removida — eram 25 arquivos vazios (0 bytes), redundantes com os documentos na raiz de `docs/` | docs | 🟢 | concluído |

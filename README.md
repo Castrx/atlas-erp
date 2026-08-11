@@ -15,9 +15,10 @@ O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoq
 | Dashboard com dados reais (indicadores, gráfico, listas) | ✅ Funcional |
 | Vendas — registro, listagem e cancelamento (ADMIN) | ✅ Completo e testado |
 | Estoque — entrada/saída e histórico paginado | ✅ Completo e testado |
+| Dados de demonstração (Sprint P4) | ✅ Idempotente, ativado por `DEMO_DATA=true` |
 | Categorias, Empresas, Usuários | ⚙️ Backend implementado — UI pendente |
 | Multi-tenancy (Empresa) | 📋 Modelado no domínio, não aplicado |
-| Testes automatizados | ✅ 83 backend + 64 frontend |
+| Testes automatizados | ✅ 88 backend + 64 frontend |
 | CI/CD | ✅ Workflow configurado (lint + testes + build em cada PR) |
 | Containerização | ✅ Compose completo (postgres + backend + frontend + pgAdmin) |
 
@@ -32,6 +33,7 @@ Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md).
 - **Dashboard**: métricas reais (total de produtos/clientes, baixo estoque, vendas recentes, receita dos últimos 7 dias) com gráfico.
 - **Vendas**: registro com cliente + itens dinâmicos (produto e quantidade, total calculado pelo backend), listagem com total/data e cancelamento (ADMIN-only) que restaura o estoque.
 - **Estoque**: entrada e saída com motivo obrigatório, e histórico paginado (10/página) com tipo (Entrada/Saída), responsável e data.
+- **Dados de demonstração**: com `DEMO_DATA=true`, o backend cria na subida empresa, categorias, produtos, clientes, vendas e movimentos de estoque de exemplo — idempotente e não-destrutivo (insere apenas o que ainda não existe), para demonstrar Dashboard, Vendas e Estoque já com dados.
 - **Backend exposto**: categorias, empresas e usuários têm endpoints implementados (parte sem UI ainda).
 
 ## Stack
@@ -63,8 +65,8 @@ Detalhes em [docs/architecture.md](docs/architecture.md), [docs/SECURITY.md](doc
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| Backend (unit + integração com Testcontainers) | `cd atlas-backend && ./mvnw test` | ✅ 83 testes |
-| Frontend (vitest + React Testing Library) | `cd atlas-frontend && npm test` | ✅ 47 testes |
+| Backend (unit + integração com Testcontainers) | `cd atlas-backend && ./mvnw test` | ✅ 88 testes |
+| Frontend (vitest + React Testing Library) | `cd atlas-frontend && npm test` | ✅ 64 testes |
 | Lint / build | `npm run lint` · `npm run build` | ✅ |
 
 Os testes de integração do backend sobem um PostgreSQL efêmero via Testcontainers (isolado do banco de desenvolvimento) e rodam as migrations Flyway reais.
@@ -93,6 +95,17 @@ npm install
 npm run dev
 # App: http://localhost:5173
 ```
+
+### Dados de demonstração (Sprint P4)
+
+Para popular o banco com dados de demonstração (empresa, categorias, produtos, clientes, vendas e movimentos de estoque) na subida do backend:
+
+```bash
+export DEMO_DATA=true
+./mvnw spring-boot:run
+```
+
+O runner é **inerte** sem `DEMO_DATA=true` e **idempotente** — insere apenas o que ainda não existe (nunca altera nem remove dados existentes), então pode ficar ligado no dia a dia de desenvolvimento. Na stack em containers, defina `DEMO_DATA=true` no `docker/.env` para ativá-la.
 
 ### Stack completa em containers (Docker Compose)
 
@@ -123,8 +136,11 @@ O backend lê configuração de variáveis de ambiente, com defaults DEV-ONLY fi
 | `JWT_SECRET` | placeholder DEV-ONLY | Secret de assinatura HS256 (≥ 32 bytes; gere com `openssl rand -base64 48`) |
 | `JWT_EXPIRATION` | `86400000` | Validade do token em ms |
 | `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` / `ADMIN_BOOTSTRAP_NAME` | — | Cria o primeiro ADMIN (ver abaixo) |
+| `DEMO_DATA` | `false` | Ativa o `DemoDataRunner` — dados de demonstração idempotentes (ver acima) |
 
 O `docker-compose.yml` também usa variáveis (`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`).
+
+> O perfil padrão **não loga SQL** (Hibernate). Para ver o SQL gerado em desenvolvimento, rode o backend com o perfil `dev`: `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run`.
 
 **Como configurar o `.env` a partir do `.env.example`:**
 
@@ -162,7 +178,7 @@ Algumas capturas do estado atual (mais em [`docs/demo/`](docs/demo/)):
 - Filtrar clientes inativos no backend (hoje é feito no frontend).
 - Paginação/busca nas listagens.
 - CI configurado (`.github/workflows/ci.yml`); validação em PR real pendente de push.
-- Dados de demonstração (Sprint P4) — em andamento; containerização completa do app concluída na Sprint P3.
+- Containerização completa concluída na Sprint P3; dados de demonstração (Sprint P4) concluídos e ativáveis via `DEMO_DATA=true`.
 
 Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md) para o plano detalhado.
 

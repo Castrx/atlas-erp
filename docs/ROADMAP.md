@@ -127,19 +127,42 @@ Prepara o repo para colaboração: remove lixo de documentação e estabelece o 
 - **Backlog**: fecha `AE-064`; `AE-063` passa para `em andamento` (workflow criado; validação em PR real fica pendente de push).
 - Testado localmente reproduzindo cada comando do workflow: `./mvnw test` (83/83), `npm ci`, `npm run lint`, `npm run build`, `npx vitest run` (47/47).
 
+### Sprint P3 — Containerização
+MVP reproduzível e containerizado (commit `46bff2c`), sem funcionalidade nova de negócio.
+
+- **Backend**: `Dockerfile` multi-stage (`maven:3.9-eclipse-temurin-21` → `eclipse-temurin:21-jre`), build e runtime em etapas separadas.
+- **Frontend**: `Dockerfile` multi-stage (`node:22` → `nginx:alpine`) servindo o bundle com proxy reverso de `/api` para o backend (mesma origem, sem CORS no stack).
+- **Compose**: serviços `backend` e `frontend` adicionados ao `docker-compose.yml`; volume dedicado `atlas_erp_postgres_data`; healthcheck do postgres com `depends_on: condition: service_healthy`. App em `http://localhost:3000`, Swagger via proxy em `http://localhost:8080/swagger-ui.html`, pgAdmin em `http://localhost:5050`.
+- Testado ponta a ponta com `docker compose up --build` local (app, backend e banco em containers, sem JDK/Node no host).
+
+### Sprint Vendas + Estoque — UI no frontend
+Módulos de Vendas e Estoque com interface própria (commit `f42b9a4`), consumindo os endpoints já existentes — **nenhuma alteração de backend, migrations, Docker ou CI**.
+
+- **Vendas** (`features/vendas/`): `VendasPage` (listagem, métrica "Vendas ativas", cancelamento ADMIN-only via `ConfirmDialog` + `hasRole("ADMIN")`), `SaleFormDialog` (React Hook Form + Zod, itens dinâmicos via `useFieldArray`, total em tempo real via `useWatch`; seletores filtram produto ativo com estoque e cliente ativo), hooks `useSales`/`useCreateSale`/`useCancelSale` com invalidação de cache (`sales` + `products` + `dashboard`).
+- **Estoque** (`features/estoque/`): `EstoquePage` (histórico paginado — 10/página, métrica, entrada/saída), `StockMovementDialog` (modo `entry`/`exit`, motivo obrigatório), `StockHistoryTable` (chip ENTRY=sucesso/EXIT=erro). Hooks `useStockHistory`/`useStockEntry`/`useStockExit` invalidam `stock-history` + `products` + `dashboard`.
+- **Roteamento/menu**: rotas `/vendas` e `/estoque` (protegidas, dentro de `MainLayout`); itens do menu ligados às rotas.
+- **Testes**: 17 novos testes frontend (páginas, diálogos e hooks) — total frontend 64 (era 47). README atualizado (status, funcionalidades, limitações reais: vendas sem paginação/canceladas na listagem, histórico sem filtro por produto).
+- Fecha os itens `AE-033` (Estoque) e `AE-034` (Vendas) do backlog.
+
+### Sprint P4 / fechamento do MVP — higiene, dados de demonstração e sincronização de documentação
+Sprint de fechamento do MVP, sem funcionalidade nova de negócio. Nenhuma UI nova (Categorias, Empresas e Usuários permanecem backend-only, ver Marco C).
+
+- **Documentação sincronizada**: `PRODUCT_BACKLOG.md`, `ROADMAP.md` e `README.md` atualizados para refletir exatamente o estado atual do código (esta sprint, as sprints P3 e Vendas+Estoque e as limitações reais).
+- **Débito técnico frontend removido** (`AE-001/002/003/005/006`): `core/query/` (duplicata vazia do `queryClient`), `features/auth/services/auth.service.ts` (duplicata vazia), `features/dashboard/components/LoginForm/` (cópia obsoleta), kit `Atlas*` (`Button`, `Input`, `Card` — decisão: remover, nenhum uso no app) e `Button/styles.ts`/`MainLayout/styles.ts` (vazios). Todos verificados sem nenhuma referência.
+- **SQL logging sob perfil dev**: `show-sql`/`format_sql` removidos do perfil padrão (`application.yml`) e movidos para `application-dev.yml` — opt-in explícito via `SPRING_PROFILES_ACTIVE=dev`; o stack padrão e os testes não logam SQL.
+- **Dados de demonstração** (`AE-065`): novo `DemoDataRunner` seguindo o padrão do `AdminBootstrapRunner` — ativo apenas com `DEMO_DATA=true`, **inerte** quando ausente/false; idempotente e não-destrutivo (insere apenas o que não existe, por chave única; nunca altera/remove dados). Cria empresa, 5 categorias, 8 produtos (com estoque inicial e mínimo), 5 clientes, 5 vendas e movimentos de estoque (ENTRY de carga inicial + EXIT por item de venda), com saldos coerentes — inclusive 2 produtos em estoque baixo e 1 zerado, para o Dashboard demonstrar os alertas.
+- **Testes**: `DemoDataRunnerTest` (unitário, Mockito puro — inerte sem `DEMO_DATA`, popula quando habilitado, idempotente quando os produtos já existem) e `DemoDataRunnerIT` (integração com Testcontainers — dados coerentes na subida + idempotência num segundo `run()`). Total backend 88 (era 83). Frontend permanece 64.
+- Fecha os itens `AE-001/002/003/005/006/065` do backlog; Marco A concluído (ver abaixo).
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.
 
-**Próximas sprints já aprovadas** (sequência imediata, em andamento):
-- **Sprint P3 — Containerização**: `Dockerfile` para backend e frontend, nginx com proxy reverso, serviços `backend`/`frontend` no `docker-compose.yml` (objetivo: MVP reproduzível e containerizado, validado com `docker compose up` local antes de qualquer consideração de deploy).
-- **Sprint P4 — Dados de demonstração**: `DemoDataRunner` gated por `DEMO_DATA=true` (mesmo padrão do `AdminBootstrapRunner`), criando empresa, categorias, produtos, clientes e vendas de exemplo — para o dashboard e as telas existentes terem dados reais de demonstração.
-
 ### Marco A — Higienização do débito técnico conhecido
-Resolver (implementar ou remover, com decisão explícita para cada caso) os itens órfãos catalogados em [architecture.md](architecture.md#débito-técnico-e-código-órfão-conhecido): duplicatas de `queryClient` e `auth.service`, `LoginForm` fora de lugar, kit de componentes `Atlas*` não utilizado.
+Concluído no fechamento do MVP: as duplicatas de `queryClient` e `auth.service`, o `LoginForm` fora de lugar e o kit de componentes `Atlas*` foram removidos (decisão explícita: remover, nenhum uso no app) — itens `AE-001/002/003/005/006`.
 
 ### Marco C — Módulos de negócio no frontend
-Construir a interface para os módulos que já existem no backend mas não têm UI: Produtos, Clientes, Categorias, Estoque, Vendas. Cada módulo segue o padrão de feature já estabelecido (`features/<módulo>/{pages,components,services}`).
+Módulos com UI concluídos: Produtos (Sprints 4A/4B/8A), Clientes (5A/8A), Vendas e Estoque (sprint Vendas + Estoque). Restam sem UI, backend-only: Categorias (`AE-032`), Empresas (`AE-035`) e Usuários (`AE-036`).
 
 ### Marco D — Autorização por papel (RBAC)
 Concluído (Sprints 7A backend + 7B frontend). Refinamento futuro possível: autorização por posse de recurso (ex.: USER cancelar só a própria venda) — deliberadamente fora de escopo por ora, ver Sprint 7A no histórico acima.
@@ -148,10 +171,10 @@ Concluído (Sprints 7A backend + 7B frontend). Refinamento futuro possível: aut
 Vincular `User`, `Product`, `Customer` e demais entidades a `Company`, e aplicar esse escopo em todas as consultas — pré-requisito para qualquer uso realista com mais de uma empresa cadastrada.
 
 ### Marco F — Hardening de sessão
-Avaliar refresh token, expiração deslizante, e/ou revogação de token — hoje deliberadamente fora de escopo (ver [SECURITY.md](SECURITY.md)). Remover o logging de debug do `JwtAuthenticationFilter` antes de qualquer ambiente compartilhado.
+Avaliar refresh token, expiração deslizante, e/ou revogação de token — hoje deliberadamente fora de escopo (ver [SECURITY.md](SECURITY.md)). O logging de debug do `JwtAuthenticationFilter` já foi removido do perfil de produção na Sprint P1 (`AE-010`).
 
 ### Marco G — Qualidade e automação
-Fundação de testes automatizados entregue na Sprint 6A (autenticação, Products, Customers, Dashboard). O pipeline de CI (lint + testes + build em cada PR — `AE-063`) foi criado na Sprint P2 (`.github/workflows/ci.yml`), faltando apenas a validação em PR real (pendente de push). Ainda falta: cobertura dos módulos sem UI (`Sale`, `Stock`, `Company`, `User`) e possivelmente testes E2E de navegador real cobrindo o fluxo de autenticação já validado manualmente na Sprint 1B (`AE-062`).
+Fundação de testes automatizados entregue na Sprint 6A (autenticação, Products, Customers, Dashboard); Vendas e Estoque ganharam UI e testes na sprint de fechamento (Sprint Vendas + Estoque). O pipeline de CI (lint + testes + build em cada PR — `AE-063`) foi criado na Sprint P2 (`.github/workflows/ci.yml`), faltando apenas a validação em PR real (pendente de push). Ainda falta: cobertura unitária de regra de negócio dos módulos sem UI (`Company`, `User` — `AE-060`) e possivelmente testes E2E de navegador real cobrindo o fluxo de autenticação já validado manualmente na Sprint 1B (`AE-062`).
 
 ### Marco H — Financeiro e Relatórios
 Módulos hoje presentes apenas como itens de menu no frontend (`Financeiro`, `Relatórios`) sem nenhuma implementação de backend ou frontend — ainda não modelados.
