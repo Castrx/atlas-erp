@@ -83,6 +83,20 @@ Aplica autorização por papel (`ADMIN`/`USER`) em todos os endpoints do backend
 - Testado ponta a ponta: `mvn test` (79/79), validação manual via `curl` com usuário USER real e ADMIN real cobrindo toda a matriz, incluindo confirmação de que o token do USER continua válido após receber `403` (sem logout forçado).
 - Fecha o item `AE-040` do backlog. `AE-041` (reflexo no frontend) fica para a Sprint 7B.
 
+### Sprint 7B — RBAC: frontend
+Reflete no frontend as permissões já aplicadas no backend na Sprint 7A — puramente UX (esconder/desabilitar o que o usuário não pode fazer); a autorização real continua inteiramente no backend. Nenhuma alteração no backend.
+
+- **Leitura do token**: `core/auth/token.ts` ganhou `decodeToken`/`getRoles` (decodifica o claim `roles` do JWT, sem verificar assinatura — não precisa, é só para refletir permissão na UI). Único ponto de leitura, para nenhum componente duplicar essa lógica.
+- **`AuthContext`/`useAuth`**: `AuthContextValue` ganhou `roles: string[]` e `hasRole(role)`, calculados uma vez no login/logout e disponibilizados centralizadamente via contexto.
+- **`RequireRole`** (`core/auth/RequireRole.tsx`): mecanismo reutilizável para esconder/mostrar (ou trocar por um `fallback`) qualquer trecho de UI conforme papel — ex.: `<RequireRole role="ADMIN"><Button>Excluir</Button></RequireRole>`.
+- **Menu**: `menu.ts` ganhou o campo `requiredRole`; `Sidebar` filtra os itens por `hasRole`. Dois itens novos, ADMIN-only e inertes (sem `path`, mesmo padrão de "Financeiro"/"Relatórios" — as telas ainda não existem, `AE-035`/`AE-036`): "Usuários" e "Empresas".
+- **`ProtectedRoute`**: ganhou `requiredRole` opcional — redireciona para `/` se autenticado mas sem o papel exigido pela rota. Conveniência de navegação, não é a proteção real (essa é o `@PreAuthorize` do backend).
+- **`axios.ts`**: `401` (fora do login) continua limpando o token e redirecionando — único caso que desloga. `403` passou a ter tratamento explícito e deliberadamente diferente: nunca limpa o token nem redireciona; a lógica de decisão foi extraída para `shouldClearSessionOnError`, testável sem precisar de uma requisição HTTP real.
+- 21 novos testes: leitura de roles do JWT, `AuthContext` (login/logout atualizando `roles`/`hasRole`), `RequireRole` (mostra/esconde/fallback), `Sidebar` (menu correto por papel), `ProtectedRoute` (`requiredRole`), e `shouldClearSessionOnError` (403 nunca desloga, 401 fora do login desloga). Total frontend: 34 testes (era 13).
+- Testado ponta a ponta: `npm run build`, `npm run lint`, `npx vitest run` (34/34), `mvn test` (79/79, backend intocado), e navegador real — login como USER (menu sem "Usuários"/"Empresas"; chamada real a `GET /users` retornando `403` sem derrubar a sessão, navegação seguinte normal) e como ADMIN (menu completo). Console sem erros nos dois casos.
+- **Achado honesto, não é bug**: hoje não existe nenhuma ação administrativa real na UI (sem tela de exclusão/edição em Produtos/Clientes/Vendas, sem páginas de Usuários/Empresas) — `RequireRole` e o `requiredRole` de `ProtectedRoute` foram testados com exemplos sintéticos no próprio teste, prontos para quando essas telas existirem.
+- Fecha o item `AE-041` do backlog — RBAC (Marco D) concluído nos dois lados.
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.
@@ -94,7 +108,7 @@ Resolver (implementar ou remover, com decisão explícita para cada caso) os ite
 Construir a interface para os módulos que já existem no backend mas não têm UI: Produtos, Clientes, Categorias, Estoque, Vendas. Cada módulo segue o padrão de feature já estabelecido (`features/<módulo>/{pages,components,services}`).
 
 ### Marco D — Autorização por papel (RBAC)
-Backend concluído na Sprint 7A. Falta: Sprint 7B — refletir as permissões na UI (ocultar/desabilitar ações conforme papel, decodificando o claim `roles` já presente no JWT), sempre como reforço de UX, nunca como mecanismo de segurança (a autorização real já está no backend).
+Concluído (Sprints 7A backend + 7B frontend). Refinamento futuro possível: autorização por posse de recurso (ex.: USER cancelar só a própria venda) — deliberadamente fora de escopo por ora, ver Sprint 7A no histórico acima.
 
 ### Marco E — Multi-tenancy (Empresa)
 Vincular `User`, `Product`, `Customer` e demais entidades a `Company`, e aplicar esse escopo em todas as consultas — pré-requisito para qualquer uso realista com mais de uma empresa cadastrada.

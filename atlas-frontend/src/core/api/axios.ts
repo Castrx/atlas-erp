@@ -20,19 +20,33 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Decide se um erro de resposta deve encerrar a sessão local. Extraída à
+ * parte do interceptor para ser testável sem precisar montar uma
+ * requisição HTTP real.
+ *
+ * Só 401 (não autenticado / token inválido ou expirado) desloga — e
+ * mesmo assim não numa tentativa de login (isso é "credenciais
+ * inválidas", tratado pelo formulário). 403 (autenticado, mas sem
+ * permissão para a ação) é deliberadamente diferente: nunca limpa o
+ * token nem redireciona — cada chamada trata esse erro no próprio ponto
+ * de uso (normalmente exibindo a mensagem do `ApiError` do backend, ex.:
+ * "Você não tem permissão para executar esta ação.").
+ */
+export function shouldClearSessionOnError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  const isLoginRequest = error.config?.url === ENDPOINTS.AUTH.LOGIN;
+
+  return error.response?.status === 401 && !isLoginRequest;
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isLoginRequest = error.config?.url === ENDPOINTS.AUTH.LOGIN;
-
-    // Um 401 na própria tentativa de login é "credenciais inválidas" e deve
-    // ser tratado pelo formulário. Só forçamos logout/redirecionamento quando
-    // uma requisição autenticada perde a validade do token.
-    if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 401 &&
-      !isLoginRequest
-    ) {
+    if (shouldClearSessionOnError(error)) {
       clearToken();
       window.location.href = "/login";
     }

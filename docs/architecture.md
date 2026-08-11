@@ -95,7 +95,7 @@ Matriz de permissões:
 
 **Auto-registro sempre cria USER.** `POST /auth/register` ignora o campo `role` do corpo da requisição — mesmo enviando `role: "ADMIN"`, o usuário criado é sempre `USER` (`AuthenticationService.SELF_REGISTER_ROLE`). Criar ou promover um ADMIN só é possível via `POST /users`, que já é `ADMIN`-only — ou seja, **é preciso já ter um ADMIN para criar outro**. **Gap conhecido, sem solução nesta sprint**: não existe hoje nenhum caminho (migration seed, script, endpoint) para provisionar o primeiro ADMIN de uma instalação nova do zero — precisa ser resolvido antes de qualquer deploy real (ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md)).
 
-O frontend (Sprint 7B) só vai **refletir** essas permissões para UX (esconder/desabilitar ação que o usuário não pode fazer) — a autorização real é sempre o `@PreAuthorize` do backend; o frontend nunca é o mecanismo de segurança.
+O frontend (Sprint 7B) **reflete** essas permissões para UX (esconder/desabilitar ação que o usuário não pode fazer, ver seção "Autenticação no frontend" abaixo) — a autorização real é sempre o `@PreAuthorize` do backend; o frontend nunca é o mecanismo de segurança.
 
 ### Testes automatizados (`src/test/`)
 
@@ -146,10 +146,11 @@ Ainda não há rotas para Categorias, Estoque, Vendas etc. — são os próximos
 
 ### Autenticação no frontend
 
-- `core/auth/token.ts` é o **único** ponto de acesso ao `localStorage` para o token — nenhum componente acessa `localStorage` diretamente.
-- `core/auth/AuthContext.tsx` + `useAuth.ts` expõem `{ isAuthenticated, login, logout }` via Context API.
-- `core/api/axios.ts` tem interceptors: request injeta `Authorization: Bearer`; response trata `401` (exceto na própria chamada de login) limpando o token e redirecionando para `/login`.
-- `core/auth/ProtectedRoute.tsx` faz o guard client-side, baseado apenas na presença do token (sem decodificar `exp` — ver limitações em [SECURITY.md](SECURITY.md)).
+- `core/auth/token.ts` é o **único** ponto de acesso ao `localStorage` para o token — nenhum componente acessa `localStorage` diretamente. Desde a Sprint 7B, também expõe `decodeToken`/`getRoles` (decodifica o claim `roles` do JWT — sem verificar assinatura, não precisa: é só para refletir permissão na UI, nunca para autorizar de verdade).
+- `core/auth/AuthContext.tsx` + `useAuth.ts` expõem `{ isAuthenticated, roles, hasRole, login, logout }` via Context API. `roles`/`hasRole` são calculados uma vez no login/logout — nenhum componente decodifica o token por conta própria.
+- `core/auth/RequireRole.tsx` (Sprint 7B): mecanismo reutilizável para esconder/mostrar UI conforme papel (`<RequireRole role="ADMIN">...</RequireRole>`), usado hoje na filtragem do menu (`Sidebar`) e disponível para as próximas telas administrativas.
+- `core/api/axios.ts` tem interceptors: request injeta `Authorization: Bearer`; response trata `401` (exceto na própria chamada de login) limpando o token e redirecionando para `/login` — única situação que desloga. `403` (autenticado, sem permissão) é tratado deliberadamente diferente desde a Sprint 7B: nunca limpa o token nem redireciona (`shouldClearSessionOnError`, extraída à parte para ser testável sem HTTP real).
+- `core/auth/ProtectedRoute.tsx` faz o guard client-side, baseado na presença do token (sem decodificar `exp` — ver limitações em [SECURITY.md](SECURITY.md)) e, desde a Sprint 7B, aceita um `requiredRole` opcional — redireciona para `/` se autenticado mas sem o papel exigido pela rota (conveniência de navegação; a proteção real de cada chamada é o backend).
 
 ### Data fetching
 
@@ -167,7 +168,7 @@ src/test/test-utils.tsx  → render() customizado (QueryClientProvider + MemoryR
                             e createQueryWrapper() para testes de hook
 ```
 
-Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual: `ProtectedRoute`, `ProductFormDialog`, `CustomerFormDialog`, `useProducts`, `useCustomers` — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
+Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual: `ProtectedRoute` (incl. `requiredRole`), `ProductFormDialog`, `CustomerFormDialog`, `useProducts`, `useCustomers`, `AuthContext` (roles/`hasRole` após login/logout), `RequireRole`, `Sidebar` (menu por papel), leitura de roles do JWT (`token.ts`) e `shouldClearSessionOnError` (`axios.ts`) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
 
 ## Débito técnico e código órfão conhecido
 

@@ -40,7 +40,7 @@ Itens de trabalho priorizados, derivados do [Roadmap](docs/ROADMAP.md). Cada ite
 | ID | Item | Área | Prioridade | Status |
 |---|---|---|---|---|
 | AE-040 | Aplicar `@PreAuthorize` por papel (`ADMIN`/`USER`) nos endpoints que hoje não diferenciam acesso — ver Sprint 7A no [Roadmap](ROADMAP.md) | backend | 🔴 | concluído |
-| AE-041 | Refletir permissões por papel na UI (ocultar/desabilitar ações) — backend já pronto (Sprint 7A), UI pendente (Sprint 7B) | frontend | 🟡 | todo |
+| AE-041 | Refletir permissões por papel na UI (ocultar/desabilitar ações) — ver Sprint 7B no [Roadmap](ROADMAP.md) | frontend | 🟡 | concluído |
 | AE-042 | Avaliar estratégia de refresh token / revogação de sessão | backend | 🟡 | todo |
 | AE-043 | Rate limiting em `/auth/login` | backend | 🟡 | todo |
 | AE-044 | Decodificar `exp` do JWT no frontend para detectar expiração antes da próxima chamada de API | frontend | 🟢 | todo |

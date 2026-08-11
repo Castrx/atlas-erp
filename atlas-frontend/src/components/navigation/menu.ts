@@ -6,15 +6,24 @@ import {
     Tags,
     Boxes,
     ShoppingCart,
+    UserCog,
+    Building2,
     DollarSign,
     FileBarChart,
     Settings,
 } from "lucide-react";
 
-interface MenuItem {
+export interface MenuItem {
     label: string;
     icon: LucideIcon;
     path?: string;
+    /**
+     * Papel exigido para o item aparecer no menu (ex.: "ADMIN"). Sem isto,
+     * o item é visível a qualquer usuário autenticado. Isto é só reflexo
+     * de UX — a permissão real de cada ação é sempre decidida pelo
+     * backend, nunca por este campo.
+     */
+    requiredRole?: string;
 }
 
 export const menu: MenuItem[] = [
@@ -44,6 +53,16 @@ export const menu: MenuItem[] = [
     {
         label: "Vendas",
         icon: ShoppingCart,
+    },
+    {
+        label: "Usuários",
+        icon: UserCog,
+        requiredRole: "ADMIN",
+    },
+    {
+        label: "Empresas",
+        icon: Building2,
+        requiredRole: "ADMIN",
     },
     {
         label: "Financeiro",

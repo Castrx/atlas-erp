@@ -1,9 +1,18 @@
 import { Box, Typography } from "@mui/material";
 
+import { useAuth } from "../../../core/auth";
 import { NavItem } from "../NavItem";
 import { menu } from "../menu";
 
 export function Sidebar() {
+  const { hasRole } = useAuth();
+
+  // Reflexo de UX: item some do menu se o usuário não tiver o papel
+  // exigido. A permissão real de cada ação continua sendo do backend.
+  const visibleMenu = menu.filter(
+    (item) => !item.requiredRole || hasRole(item.requiredRole)
+  );
+
   return (
     <Box
       sx={{
@@ -31,7 +40,7 @@ export function Sidebar() {
           mt: 2,
         }}
       >
-        {menu.map((item) => (
+        {visibleMenu.map((item) => (
           <NavItem
             key={item.label}
             label={item.label}
