@@ -13,7 +13,7 @@ Este documento descreve a arquitetura **atual** do Atlas ERP: como o sistema est
 
 - O frontend é uma SPA que consome a API via Axios; não há server-side rendering.
 - O backend é uma API REST stateless — nenhuma sessão é mantida no servidor, autenticação é feita por JWT em cada requisição.
-- O banco é PostgreSQL, versionado por migrations Flyway (`atlas-backend/src/main/resources/db/migration`, atualmente 14 migrations, `V1` a `V14`).
+- O banco é PostgreSQL, versionado por migrations Flyway (`atlas-backend/src/main/resources/db/migration`, atualmente 15 migrations, `V1` a `V15`).
 - Não há gateway, service mesh, filas ou cache distribuído — é uma arquitetura monolítica de dois serviços, adequada ao estágio atual do produto.
 
 ## Backend (`atlas-backend/`)
@@ -93,7 +93,7 @@ Matriz de permissões:
 | `/stock/**` (entrada/saída/histórico) | ✅ | ✅ |
 | `GET /dashboard` | ✅ | ✅ |
 
-**Auto-registro sempre cria USER.** `POST /auth/register` ignora o campo `role` do corpo da requisição — mesmo enviando `role: "ADMIN"`, o usuário criado é sempre `USER` (`AuthenticationService.SELF_REGISTER_ROLE`). Criar ou promover um ADMIN só é possível via `POST /users`, que já é `ADMIN`-only — ou seja, **é preciso já ter um ADMIN para criar outro**. **Gap conhecido, sem solução nesta sprint**: não existe hoje nenhum caminho (migration seed, script, endpoint) para provisionar o primeiro ADMIN de uma instalação nova do zero — precisa ser resolvido antes de qualquer deploy real (ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md)).
+**Auto-registro sempre cria USER.** `POST /auth/register` ignora o campo `role` do corpo da requisição — mesmo enviando `role: "ADMIN"`, o usuário criado é sempre `USER` (`AuthenticationService.SELF_REGISTER_ROLE`). Criar ou promover um ADMIN só é possível via `POST /users`, que já é `ADMIN`-only — ou seja, é preciso já ter um ADMIN para criar outro. **Provisionamento do primeiro ADMIN**: `AdminBootstrapRunner` resolve esse gap — na subida do backend, se `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD` estiverem definidos, o primeiro ADMIN de uma instalação nova é criado automaticamente. É idempotente: se o e-mail já existir, nada é feito.
 
 O frontend (Sprint 7B) **reflete** essas permissões para UX (esconder/desabilitar ação que o usuário não pode fazer, ver seção "Autenticação no frontend" abaixo) — a autorização real é sempre o `@PreAuthorize` do backend; o frontend nunca é o mecanismo de segurança.
 
@@ -141,8 +141,10 @@ AppProviders
 | `/` | protegido (`ProtectedRoute`) | `MainLayout` + `DashboardPage` (feature `dashboard`) |
 | `/products` | protegido (`ProtectedRoute`) | `MainLayout` + `ProductsPage` (feature `products`) |
 | `/customers` | protegido (`ProtectedRoute`) | `MainLayout` + `CustomersPage` (feature `customers`) |
+| `/vendas` | protegido (`ProtectedRoute`) | `MainLayout` + `VendasPage` (feature `vendas`) |
+| `/estoque` | protegido (`ProtectedRoute`) | `MainLayout` + `EstoquePage` (feature `estoque`) |
 
-Ainda não há rotas para Categorias, Estoque, Vendas etc. — são os próximos módulos do roadmap. `NavItem` (`components/navigation`) aceita um `path` opcional e navega via `react-router` quando presente; hoje os itens "Produtos" e "Clientes" do menu têm `path` associado (`menu.ts`) — os demais itens permanecem apenas visuais, sem destino.
+Ainda não há rotas para Categorias, Empresa e Usuários — são os próximos módulos do roadmap. `NavItem` (`components/navigation`) aceita um `path` opcional e navega via `react-router` quando presente; hoje os itens "Dashboard", "Produtos", "Clientes", "Vendas" e "Estoque" do menu têm `path` associado (`menu.ts`) — Categorias, Usuários, Empresas, Financeiro, Relatórios e Configurações permanecem apenas visuais, sem destino.
 
 ### Autenticação no frontend
 
@@ -154,7 +156,7 @@ Ainda não há rotas para Categorias, Estoque, Vendas etc. — são os próximos
 
 ### Data fetching
 
-TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso em todas as features (`dashboard`, `products`, `customers`): cada hook (`useDashboard`, `useProducts`, `useCustomers`, etc.) consome o endpoint via `useQuery`, sem cálculo algum no cliente — só busca e cacheia o payload já processado pelo backend. É o padrão recomendado para os próximos módulos (Categorias, Estoque, Vendas).
+TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso em todas as features (`dashboard`, `products`, `customers`, `vendas`, `estoque`): cada hook (`useDashboard`, `useProducts`, `useCustomers`, `useSales`, `useStockHistory`, etc.) consome o endpoint via `useQuery`, sem cálculo algum no cliente — só busca e cacheia o payload já processado pelo backend. É o padrão recomendado para os próximos módulos (Categorias, Empresa, Usuários).
 
 ### Testes automatizados
 
@@ -168,18 +170,18 @@ src/test/test-utils.tsx  → render() customizado (QueryClientProvider + MemoryR
                             e createQueryWrapper() para testes de hook
 ```
 
-Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual: `ProtectedRoute` (incl. `requiredRole`), `ProductFormDialog`, `CustomerFormDialog`, `useProducts`, `useCustomers`, `AuthContext` (roles/`hasRole` após login/logout), `RequireRole`, `Sidebar` (menu por papel), leitura de roles do JWT (`token.ts`) e `shouldClearSessionOnError` (`axios.ts`) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
+Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual: `ProtectedRoute` (incl. `requiredRole`), `ProductFormDialog`, `CustomerFormDialog`, `SaleFormDialog`, `StockMovementDialog`, as páginas `ProductsPage`, `CustomersPage`, `VendasPage`, `EstoquePage`, os hooks `useProducts`, `useCustomers`, `useSales`, `useStockHistory`, `AuthContext` (roles/`hasRole` após login/logout), `RequireRole`, `Sidebar` (menu por papel), leitura de roles do JWT (`token.ts`) e `shouldClearSessionOnError` (`axios.ts`) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
 
 ## Débito técnico e código órfão conhecido
 
-Um levantamento estrutural (Sprint 0) identificou arquivos escaffolded que existem na árvore mas não estão conectados à aplicação. Eles foram **intencionalmente mantidos** (nenhuma remoção foi feita fora de escopo) e devem ser tratados como itens de backlog, não como bugs ocultos:
+Um levantamento estrutural (Sprint 0) identificou arquivos escaffolded que existiam na árvore sem estarem conectados à aplicação. Eles foram **removidos em limpezas de sprints posteriores** — a árvore atual não tem código órfão conhecido:
 
-- `core/query/` (`queryClient.ts`, `index.ts`) — duplicata vazia de `core/providers/queryClient.ts`.
-- `features/auth/services/auth.service.ts` — duplicata vazia; o serviço real vive em `core/auth/services/auth.service.ts`.
-- `features/dashboard/components/LoginForm/` — cópia obsoleta fora do lugar; o `LoginForm` em uso está em `features/auth/components/LoginForm/`.
-- `components/ui/{Button,Input,Card}` (kit "Atlas\*") — implementados mas não consumidos em nenhuma tela ainda.
-- `components/ui/Button/styles.ts`, `layouts/MainLayout/styles.ts` — arquivos vazios, sem uso.
-- Documentação: a árvore `docs/architecture/`, `docs/backend/`, `docs/frontend/`, `docs/api/`, `docs/ui/`, `docs/engineering/`, `docs/roadmap/` existe como scaffold, majoritariamente vazia — este documento (`docs/architecture.md`) e seus pares na raiz de `docs/` são a referência ativa.
+- `core/query/` (`queryClient.ts`, `index.ts`) — duplicata de `core/providers/queryClient.ts`; removido.
+- `features/auth/services/auth.service.ts` — duplicata vazia; o serviço real vive em `core/auth/services/auth.service.ts`; removido.
+- `features/dashboard/components/LoginForm/` — cópia obsoleta fora do lugar; o `LoginForm` em uso está em `features/auth/components/LoginForm/`; removido.
+- `components/ui/{Button,Input,Card}` (kit "Atlas\*") — implementados mas não consumidos em nenhuma tela; removidos. O kit compartilhado atual é `ConfirmDialog`, `ErrorState` e `MetricCard`.
+- Arquivos vazios `components/ui/Button/styles.ts` e `layouts/MainLayout/styles.ts` — removidos.
+- A árvore de docs scaffold vazia (`docs/architecture/`, `docs/backend/`, `docs/frontend/`, `docs/api/`, `docs/ui/`, `docs/engineering/`, `docs/roadmap/`) — removida (AE-064); os documentos na raiz de `docs/` são a referência ativa.
 
 ## Multi-tenancy (Empresa)
 

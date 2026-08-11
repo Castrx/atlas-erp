@@ -84,13 +84,13 @@ chore: atualiza dependências do frontend
 
 ## Testes
 
-- Backend: `./mvnw test` (a partir de `atlas-backend/`). Requer o PostgreSQL local rodando (o teste de contexto sobe a aplicação inteira, incluindo Flyway).
-- Frontend: ainda não há suíte de testes configurada (ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md), `AE-061`). Até lá, a verificação mínima esperada em qualquer PR de frontend é `npm run build` e `npm run lint` limpos, além de teste manual do fluxo alterado.
+- Backend: `./mvnw test` (a partir de `atlas-backend/`). Exige apenas o Docker em execução — os testes de integração sobem um PostgreSQL efêmero via Testcontainers e rodam as migrations Flyway reais, sem depender de um banco local.
+- Frontend: `npm test` (a partir de `atlas-frontend/`), com Vitest + React Testing Library. A verificação mínima esperada em qualquer PR de frontend é `npm test`, `npm run build` e `npm run lint` limpos.
 
 ## Abrindo um Pull Request
 
 - Descreva o objetivo da mudança e o que foi deliberadamente deixado de fora.
-- Rode build e testes localmente antes de abrir o PR — um PR não deve depender de CI para descobrir que quebrou o build (o projeto ainda não tem CI configurado, ver `AE-063`).
+- Rode build e testes localmente antes de abrir o PR — um PR não deve depender de CI para descobrir que quebrou o build. O CI (`.github/workflows/ci.yml`) roda `mvn test`, lint, build e vitest em cada push/PR.
 - Referencie o ID do item do backlog (`AE-NNN`) quando aplicável.
 - Se a mudança tocar autenticação, segurança ou CORS, mencione explicitamente — são áreas sensíveis documentadas em [SECURITY.md](SECURITY.md).
 

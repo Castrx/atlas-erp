@@ -46,8 +46,8 @@ O Atlas ERP resolve isso centralizando produtos, clientes, categorias, estoque e
 | Recharts | Visualização de dados (gráfico do dashboard) |
 
 ### Infraestrutura
-- **Docker Compose** — PostgreSQL + pgAdmin para ambiente local.
-- Sem containerização da aplicação em si e sem CI/CD ainda — ver [FUTURE_SCOPE.md](FUTURE_SCOPE.md).
+- **Docker Compose** — stack completa: PostgreSQL + backend + frontend (nginx) + pgAdmin, com healthcheck e `docker compose up --build`.
+- **Containerização e CI/CD** — Dockerfiles multi-stage (backend Maven → JRE 21; frontend Vite → nginx) e workflow GitHub Actions (`.github/workflows/ci.yml`) com `mvn test`, lint, build e vitest em cada push/PR.
 
 ## Arquitetura
 
@@ -85,16 +85,15 @@ Ver [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) para a versão isolada de
 |---|---|---|---|
 | **Autenticação** | ✅ | ✅ | JWT, login/logout, rota protegida, testado ponta a ponta |
 | **Dashboard** | ✅ | ✅ | 7 indicadores agregados, gráfico de faturamento (7 dias), vendas recentes, estoque baixo — tudo calculado no backend |
-| **Produtos — listagem** | ✅ | ✅ | Loading/empty/error state, skeleton |
-| **Produtos — cadastro** | ✅ | ✅ | Dialog, validação client-side (Zod) + server-side, Snackbar, atualização automática via invalidação de cache |
+| **Produtos** | ✅ | ✅ | CRUD completo — listagem com loading/empty/error, dialog com validação client-side (Zod) + server-side, atualização via invalidação de cache |
+| **Clientes** | ✅ | ✅ | CRUD completo (exclusão = inativação), validação de documento único |
+| **Vendas** | ✅ | ✅ | Registro com itens dinâmicos, listagem e cancelamento (ADMIN) — baixa/estorno automático de estoque |
+| **Estoque (movimentações)** | ✅ | ✅ | Entrada/saída com motivo obrigatório e histórico paginado |
 | **Categorias** | ✅ | ❌ | CRUD completo no backend; consumido hoje só como seletor no cadastro de produto |
 | **Empresa (Company)** | ✅ | ❌ | CRUD completo no backend; sem vínculo com as demais entidades ainda (single-tenant) |
-| **Clientes** | ✅ | ❌ | CRUD completo no backend |
-| **Estoque (movimentações)** | ✅ | ❌ | Entrada/saída com histórico paginado no backend |
-| **Vendas** | ✅ | ❌ | Criação, listagem, cancelamento — com baixa automática de estoque |
 | **Usuários** | ✅ | ❌ | CRUD no backend |
 
-Seis dos nove módulos de domínio já têm backend funcional e testável via Swagger UI — o gargalo atual é exclusivamente construir a interface, seguindo o mesmo padrão já validado em Produtos (ver [FUTURE_SCOPE.md](FUTURE_SCOPE.md)).
+Seis dos nove módulos de domínio têm backend e interface completos e testados; os três restantes (Categorias, Empresa, Usuários) têm backend pronto, aguardando interface (ver [FUTURE_SCOPE.md](FUTURE_SCOPE.md)).
 
 ## Módulos planejados
 
@@ -120,11 +119,10 @@ Detalhado em [FUTURE_SCOPE.md](FUTURE_SCOPE.md).
 
 Ordem recomendada, do [ROADMAP.md](ROADMAP.md):
 
-1. Construir a interface dos módulos que já têm backend pronto — Clientes, Categorias, Estoque, Vendas — replicando o padrão estabelecido em Produtos.
-2. Aplicar `@PreAuthorize` por papel (`ADMIN`/`USER`) nos endpoints — os papéis já existem no token, só não são checados ainda.
-3. Modelar e aplicar o vínculo de `Company` a todas as entidades (multiempresa real).
-4. Cobertura de testes automatizados (hoje há apenas um teste de contexto no backend e nenhum no frontend).
-5. Pipeline de CI (lint + build + testes por PR) e estratégia de deploy.
+1. Construir a interface dos módulos restantes — Categorias, Empresa, Usuários — replicando o padrão já estabelecido em Produtos/Clientes/Vendas.
+2. Modelar e aplicar o vínculo de `Company` a todas as entidades (multiempresa real).
+3. Higiene de segurança antes de deploy público — JWT em cookie HttpOnly, rate limiting em `/auth/login`, mensagem genérica em erros 500.
+4. Estratégia de deploy (a validação por CI já está automatizada em `.github/workflows/ci.yml`).
 
 Detalhamento completo em [FUTURE_SCOPE.md](FUTURE_SCOPE.md).
 

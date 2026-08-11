@@ -1,6 +1,7 @@
 package com.atlas.backend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -106,11 +108,16 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        // Não expõe a mensagem interna ao cliente — loga o erro no servidor e
+        // devolve uma resposta genérica. Exceções de domínio esperadas têm
+        // handler próprio acima e nunca chegam aqui.
+        log.error("Erro inesperado em {} {}", request.getMethod(), request.getRequestURI(), ex);
+
         return new ApiError(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                ex.getMessage(),
+                "Ocorreu um erro inesperado. Tente novamente em instantes.",
                 request.getRequestURI()
         );
     }
