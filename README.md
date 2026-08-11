@@ -16,7 +16,8 @@ O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoq
 | Categorias, Estoque, Vendas, Empresas, Usuários | ⚙️ Backend implementado — UI pendente |
 | Multi-tenancy (Empresa) | 📋 Modelado no domínio, não aplicado |
 | Testes automatizados | ✅ 83 backend + 47 frontend |
-| CI/CD | 📋 Não configurado (próximo passo) |
+| CI/CD | ✅ Workflow configurado (lint + testes + build em cada PR) |
+| Containerização | ✅ Compose completo (postgres + backend + frontend + pgAdmin) |
 
 Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md).
 
@@ -74,7 +75,7 @@ cd docker
 docker compose up -d postgres
 ```
 
-> ⚠️ **Já tinha o volume do Postgres?** O `POSTGRES_PASSWORD` do compose só define a senha na **primeira** inicialização do volume. Se o `postgres_data` já existe (criado com `atlas123`, como no `docker-compose` original), o Postgres **continua autenticando com a senha antiga** — não é preciso recriar nada. Antes do passo 2, apenas aponte o backend para a mesma senha: `export DB_PASSWORD=atlas123`. Só recrie o volume (`docker compose down -v && docker compose up -d postgres`) se você **quiser** de fato trocar as credenciais.
+> ℹ️ **Volume do Postgres:** a partir da Sprint P3 o Compose usa um volume dedicado (`atlas_erp_postgres_data`), inicializado na primeira subida com as credenciais do `docker/.env`. O volume antigo (`docker_postgres_data`, criado com `atlas123`) fica **preservado no disco**, apenas não montado pelo Compose. Para o backend local (`./mvnw spring-boot:run`), use as mesmas credenciais do postgres do Compose — ex.: `export DB_PASSWORD=CHANGE_ME_DB_PASSWORD`, ou o valor de `POSTGRES_PASSWORD` definido no seu `docker/.env`.
 
 ```bash
 # 2. Backend (porta 8080) — em outro terminal
@@ -88,6 +89,24 @@ npm install
 npm run dev
 # App: http://localhost:5173
 ```
+
+### Stack completa em containers (Docker Compose)
+
+Para rodar **tudo** — PostgreSQL, backend e frontend — em containers, sem JDK/Node local:
+
+```bash
+cd docker
+cp .env.example .env   # ajuste POSTGRES_PASSWORD, JWT_SECRET e ADMIN_BOOTSTRAP_*
+docker compose up --build
+```
+
+- **App**: http://localhost:3000 (frontend via nginx)
+- **Backend / Swagger**: http://localhost:8080/swagger-ui.html
+- **pgAdmin**: http://localhost:5050
+
+> O frontend (nginx) faz proxy reverso de `/api` para o backend — o bundle é construído com `VITE_API_URL=/api`. O backend do Compose conecta no postgres do próprio Compose pela rede interna (`postgres:5432`), com as credenciais do `docker/.env`.
+>
+> 🔑 Na primeira subida de uma instalação nova, defina `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD` no `docker/.env` para criar o primeiro ADMIN (idempotente); remova depois.
 
 ### Variáveis de ambiente
 
@@ -136,7 +155,8 @@ Algumas capturas do estado atual (mais em [`docs/demo/`](docs/demo/)):
 - Multi-tenancy modelado, não aplicado.
 - Filtrar clientes inativos no backend (hoje é feito no frontend).
 - Paginação/busca nas listagens.
-- CI/CD e conteinerização completa do app (próximos passos planejados).
+- CI configurado (`.github/workflows/ci.yml`); validação em PR real pendente de push.
+- Dados de demonstração (Sprint P4) — em andamento; containerização completa do app concluída na Sprint P3.
 
 Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md) para o plano detalhado.
 

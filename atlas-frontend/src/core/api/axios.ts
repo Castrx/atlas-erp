@@ -3,8 +3,11 @@ import axios from "axios";
 import { clearToken, getToken } from "../auth/token";
 import { ENDPOINTS } from "./endpoints";
 
+// URL base da API:
+// - dev local: fallback http://localhost:8080 (CORS já configurado no backend);
+// - build em container: VITE_API_URL=/api (proxy reverso do nginx para o backend).
 export const api = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
   },

@@ -109,9 +109,31 @@ Edição e exclusão de Produtos e Clientes na UI — o passo seguinte natural �
 - Testado ponta a ponta: `npm run build`, `npm run lint`, `npx vitest run` (47/47), `mvn test` (79/79, backend intocado) e navegador real via driver Puppeteer — checklist completo da sprint (30 verificações) verde, incluindo RBAC (USER não vê "Excluir"; `DELETE` direto retorna `403` sem derrubar a sessão), Dashboard intacto, console sem erros e limpeza dos dados de teste.
 - Fecha os itens `AE-030` (Produtos) e `AE-031` (Clientes) do backlog.
 
+### Sprint P1 — Hardening de segredos, bootstrap de ADMIN e fundação de infraestrutura
+Sprint de infraestrutura (commit `e177b735`), sem funcionalidade nova de negócio. Prepara o projeto para sair de dev local.
+
+- **Segredos**: credenciais de banco e secret JWT passaram a ser lidos de variáveis de ambiente (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`) com defaults DEV-ONLY fictícios e claramente marcados em `application.yml`; `.env.example` com apenas placeholders (nenhum valor real versionado). Classe `SecurityConstants` (secret hardcoded, não utilizada) removida.
+- **Bootstrap de ADMIN** (`AE-045`): novo `AdminBootstrapRunner` — na subida, cria o primeiro `ADMIN` de uma instalação nova via `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_BOOTSTRAP_PASSWORD`/`ADMIN_BOOTSTRAP_NAME`. Idempotente: se o e-mail já existir, nada é feito. Resolve o gap registrado na Sprint 7A.
+- **Logging do filtro JWT** (`AE-010`): o `JwtAuthenticationFilter` não imprime mais tokens recebidos — registra apenas a categoria do erro em `DEBUG` (nunca token, header ou claims).
+- **Frontend**: `react`/`react-dom` pinados em `19.0.0` (resolveram-se os 47 testes com `npm ci`; nenhuma outra dependência foi alterada).
+- **Docs**: `README.md` (seção de `.env`, sobrevivência do volume do Postgres, primeiro ADMIN) e `SECURITY.md` (limitações reais, política de segredos) refrescados para refletir o comportamento atual.
+- Testado: `mvn test` (83/83), `npx vitest run` (47/47), `npm run lint`, `npm run build`. Fecha `AE-010`, `AE-011`, `AE-012` e `AE-045`.
+
+### Sprint P2 — Higiene e CI
+Prepara o repo para colaboração: remove lixo de documentação e estabelece o pipeline de CI.
+
+- **Docs granulares vazios** (`AE-064`): removidos os 25 arquivos de 0 bytes em `docs/{architecture,backend,frontend,api,ui,engineering,roadmap}/` — decisão: remover, por serem redundantes com os documentos na raiz de `docs/` (que já cobrem o conteúdo).
+- **CI** (`AE-063`): novo `.github/workflows/ci.yml` com dois jobs independentes — `backend` (JDK 21 Temurin, cache Maven, `./mvnw test` — Testcontainers usa o Docker nativo do runner) e `frontend` (Node 22, cache npm, `npm ci`, `npm run lint`, `npm run build`, `npx vitest run`).
+- **Backlog**: fecha `AE-064`; `AE-063` passa para `em andamento` (workflow criado; validação em PR real fica pendente de push).
+- Testado localmente reproduzindo cada comando do workflow: `./mvnw test` (83/83), `npm ci`, `npm run lint`, `npm run build`, `npx vitest run` (47/47).
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.
+
+**Próximas sprints já aprovadas** (sequência imediata, em andamento):
+- **Sprint P3 — Containerização**: `Dockerfile` para backend e frontend, nginx com proxy reverso, serviços `backend`/`frontend` no `docker-compose.yml` (objetivo: MVP reproduzível e containerizado, validado com `docker compose up` local antes de qualquer consideração de deploy).
+- **Sprint P4 — Dados de demonstração**: `DemoDataRunner` gated por `DEMO_DATA=true` (mesmo padrão do `AdminBootstrapRunner`), criando empresa, categorias, produtos, clientes e vendas de exemplo — para o dashboard e as telas existentes terem dados reais de demonstração.
 
 ### Marco A — Higienização do débito técnico conhecido
 Resolver (implementar ou remover, com decisão explícita para cada caso) os itens órfãos catalogados em [architecture.md](architecture.md#débito-técnico-e-código-órfão-conhecido): duplicatas de `queryClient` e `auth.service`, `LoginForm` fora de lugar, kit de componentes `Atlas*` não utilizado.
@@ -129,7 +151,7 @@ Vincular `User`, `Product`, `Customer` e demais entidades a `Company`, e aplicar
 Avaliar refresh token, expiração deslizante, e/ou revogação de token — hoje deliberadamente fora de escopo (ver [SECURITY.md](SECURITY.md)). Remover o logging de debug do `JwtAuthenticationFilter` antes de qualquer ambiente compartilhado.
 
 ### Marco G — Qualidade e automação
-Fundação de testes automatizados entregue na Sprint 6A (autenticação, Products, Customers, Dashboard). Falta: cobertura dos módulos ainda sem UI (`Sale`, `Stock`, `Company`, `User`), pipeline de CI (lint + testes + build em cada PR — `AE-063`), e possivelmente testes E2E de navegador real cobrindo o fluxo de autenticação já validado manualmente na Sprint 1B (`AE-062`).
+Fundação de testes automatizados entregue na Sprint 6A (autenticação, Products, Customers, Dashboard). O pipeline de CI (lint + testes + build em cada PR — `AE-063`) foi criado na Sprint P2 (`.github/workflows/ci.yml`), faltando apenas a validação em PR real (pendente de push). Ainda falta: cobertura dos módulos sem UI (`Sale`, `Stock`, `Company`, `User`) e possivelmente testes E2E de navegador real cobrindo o fluxo de autenticação já validado manualmente na Sprint 1B (`AE-062`).
 
 ### Marco H — Financeiro e Relatórios
 Módulos hoje presentes apenas como itens de menu no frontend (`Financeiro`, `Relatórios`) sem nenhuma implementação de backend ou frontend — ainda não modelados.

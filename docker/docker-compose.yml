@@ -17,6 +17,60 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    # Necessário para o backend aguardar o postgres pronto (depends_on
+    # condicional não existe em docker compose — usa healthcheck).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atlas} -d ${POSTGRES_DB:-atlas_erp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+    networks:
+      - atlas-network
+
+  backend:
+    build:
+      context: ../atlas-backend
+    container_name: atlas-backend
+    restart: unless-stopped
+
+    environment:
+      # O backend do Compose usa o postgres do próprio Compose (rede interna),
+      # com as mesmas credenciais — tudo via interpolação do .env, sem
+      # segredo hardcoded.
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-atlas_erp}
+      DB_USERNAME: ${POSTGRES_USER:-atlas}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-DEV_ONLY_CHANGE_ME_JWT_SECRET_0123456789abcdef0123456789abcdef}
+      # Bootstrap do primeiro ADMIN (idempotente) — define no docker/.env
+      # apenas na primeira subida; vazio = runner inerte.
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      ADMIN_BOOTSTRAP_NAME: ${ADMIN_BOOTSTRAP_NAME:-Administrador}
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - atlas-network
+
+  frontend:
+    build:
+      context: ../atlas-frontend
+    container_name: atlas-frontend
+    restart: unless-stopped
+
+    # nginx (porta 80 do container) exposta na 3000 do host
+    ports:
+      - "3000:80"
+
+    depends_on:
+      - backend
+
     networks:
       - atlas-network
 
@@ -39,7 +93,10 @@ services:
       - atlas-network
 
 volumes:
+  # Volume DEDICADO da stack containerizada (atlas_erp_postgres_data). O volume
+  # antigo (docker_postgres_data) fica preservado no disco, apenas não montado.
   postgres_data:
+    name: atlas_erp_postgres_data
 
 networks:
   atlas-network:
