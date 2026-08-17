@@ -6,6 +6,9 @@ import { ProductsPage } from "../../features/products";
 import { CustomersPage } from "../../features/customers";
 import { VendasPage } from "../../features/vendas";
 import { EstoquePage } from "../../features/estoque";
+import { CategoriesPage } from "../../features/categories";
+import { UsersPage } from "../../features/users";
+import { CompaniesPage } from "../../features/companies";
 import { LoginPage } from "../../features/auth";
 import { ProtectedRoute } from "../auth";
 
@@ -64,6 +67,39 @@ export function AppRoutes() {
           <ProtectedRoute>
             <MainLayout>
               <EstoquePage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/categories"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <CategoriesPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <MainLayout>
+              <UsersPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/companies"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <MainLayout>
+              <CompaniesPage />
             </MainLayout>
           </ProtectedRoute>
         }

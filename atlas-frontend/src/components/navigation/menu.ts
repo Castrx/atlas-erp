@@ -45,6 +45,7 @@ export const menu: MenuItem[] = [
     {
         label: "Categorias",
         icon: Tags,
+        path: "/categories",
     },
     {
         label: "Estoque",
@@ -59,11 +60,13 @@ export const menu: MenuItem[] = [
     {
         label: "Usuários",
         icon: UserCog,
+        path: "/users",
         requiredRole: "ADMIN",
     },
     {
         label: "Empresas",
         icon: Building2,
+        path: "/companies",
         requiredRole: "ADMIN",
     },
     {

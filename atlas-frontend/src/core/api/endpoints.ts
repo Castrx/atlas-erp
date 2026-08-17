@@ -14,4 +14,8 @@ export const ENDPOINTS = {
   STOCK: "/stock",
 
   SALES: "/sales",
+
+  USERS: "/users",
+
+  COMPANIES: "/companies",
 };
