@@ -146,9 +146,10 @@ export function SaleFormDialog({
       onClose={handleClose}
       fullWidth
       maxWidth="sm"
+      aria-labelledby="sale-form-dialog-title"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>Nova Venda</DialogTitle>
+        <DialogTitle id="sale-form-dialog-title">Nova Venda</DialogTitle>
 
         <DialogContent>
           <Stack
@@ -166,6 +167,7 @@ export function SaleFormDialog({
                   error={!!errors.customerId}
                   helperText={errors.customerId?.message}
                   fullWidth
+                  autoFocus
                 >
                   {activeCustomers.map((customer) => (
                     <MenuItem
@@ -223,7 +225,7 @@ export function SaleFormDialog({
                       errors.items?.[index]?.quantity?.message ??
                       (selectedProduct ? `Disponível: ${selectedProduct.stock}` : " ")
                     }
-                    sx={{ width: 130 }}
+                    sx={{ width: { xs: 88, sm: 130 }, flexShrink: 0 }}
                     inputProps={{ inputMode: "numeric" }}
                   />
 

@@ -30,11 +30,18 @@ export function ConfirmDialog({
       onClose={confirming ? undefined : onCancel}
       fullWidth
       maxWidth="xs"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-description"
     >
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle id="confirm-dialog-title">{title}</DialogTitle>
 
       <DialogContent>
-        <Typography variant="body2">{message}</Typography>
+        <Typography
+          id="confirm-dialog-description"
+          variant="body2"
+        >
+          {message}
+        </Typography>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3 }}>

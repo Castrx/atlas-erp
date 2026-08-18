@@ -7,6 +7,7 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { MetricCard } from "../../../components/ui/MetricCard";
 import { useAuth } from "../../../core/auth";
+import { tokens } from "../../../core/theme/tokens";
 import { CustomerFormDialog } from "../components/CustomerFormDialog";
 import { CustomersTable } from "../components/CustomersTable";
 import { useCustomers } from "../hooks/useCustomers";
@@ -103,9 +104,10 @@ export function CustomersPage() {
   return (
     <Box>
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems="center"
+        alignItems={{ xs: "stretch", sm: "center" }}
+        spacing={1.5}
         mb={3}
       >
         <Typography variant="h3">
@@ -134,7 +136,8 @@ export function CustomersPage() {
           <Stack
             spacing={1.5}
             sx={{
-              border: "1px solid #E5E7EB",
+              border: "1px solid",
+              borderColor: "divider",
               borderRadius: 3,
               p: 3,
             }}
@@ -177,13 +180,14 @@ export function CustomersPage() {
                 py: 8,
                 px: 4,
                 borderRadius: 3,
-                border: "1px dashed #CBD5E1",
-                bgcolor: "#F8FAFC",
+                border: "1px dashed",
+                borderColor: "divider",
+                bgcolor: "background.default",
               }}
             >
               <UserSearch
                 size={48}
-                color="#94A3B8"
+                color={tokens.colors.textSecondary}
               />
 
               <Typography

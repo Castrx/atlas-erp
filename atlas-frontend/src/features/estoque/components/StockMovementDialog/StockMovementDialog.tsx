@@ -123,9 +123,10 @@ export function StockMovementDialog({
       onClose={handleClose}
       fullWidth
       maxWidth="sm"
+      aria-labelledby="stock-movement-dialog-title"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>
+        <DialogTitle id="stock-movement-dialog-title">
           {isEntry ? "Entrada de Estoque" : "Saída de Estoque"}
         </DialogTitle>
 

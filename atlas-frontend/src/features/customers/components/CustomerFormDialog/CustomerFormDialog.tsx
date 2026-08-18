@@ -116,9 +116,12 @@ export function CustomerFormDialog({
       onClose={handleClose}
       fullWidth
       maxWidth="sm"
+      aria-labelledby="customer-form-dialog-title"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>{isEditing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+        <DialogTitle id="customer-form-dialog-title">
+          {isEditing ? "Editar Cliente" : "Novo Cliente"}
+        </DialogTitle>
 
         <DialogContent>
           <Stack

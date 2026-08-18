@@ -1,10 +1,16 @@
 import { Box, Typography } from "@mui/material";
 
 import { useAuth } from "../../../core/auth";
+import { CompassMark } from "../../ui/CompassMark";
 import { NavItem } from "../NavItem";
 import { menu } from "../menu";
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Repassado a cada NavItem — fecha o Drawer mobile ao navegar (ver MainLayout). */
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const { hasRole } = useAuth();
 
   // Reflexo de UX: item some do menu se o usuário não tiver o papel
@@ -18,8 +24,9 @@ export function Sidebar() {
       sx={{
         width: 260,
         height: "100vh",
-        bgcolor: "#FFFFFF",
-        borderRight: "1px solid #E2E8F0",
+        bgcolor: "background.paper",
+        borderRight: "1px solid",
+        borderColor: "divider",
         display: "flex",
         flexDirection: "column",
       }}
@@ -27,12 +34,30 @@ export function Sidebar() {
       <Box
         sx={{
           p: 3,
-          borderBottom: "1px solid #E2E8F0",
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          borderBottom: "1px solid",
+          borderColor: "divider",
         }}
       >
-        <Typography variant="h5" fontWeight={700}>
-          Atlas ERP
-        </Typography>
+        <Box
+          sx={{
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <CompassMark size={18} />
+        </Box>
+
+        <Typography variant="h5">Atlas ERP</Typography>
       </Box>
 
       <Box
@@ -46,6 +71,7 @@ export function Sidebar() {
             label={item.label}
             icon={item.icon}
             path={item.path}
+            onNavigate={onNavigate}
           />
         ))}
       </Box>
