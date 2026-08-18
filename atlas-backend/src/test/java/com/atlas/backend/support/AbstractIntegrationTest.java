@@ -69,6 +69,22 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
     }
 
+    /**
+     * Rate limiting de login (ver LoginRateLimiter) usa o IP remoto como
+     * chave, e o MockMvc sempre reporta {@code 127.0.0.1} — sem isto, a
+     * suíte inteira de integração (que registra/loga dezenas de vezes via
+     * {@link #registerAndLogin}, em praticamente toda classe de teste)
+     * esbarraria no limite de produção em poucos segundos. Testes
+     * dedicados ao rate limiting (LoginRateLimitIT) apertam esse valor
+     * pontualmente por método (via o bean RateLimitProperties) e restauram
+     * ao final, sem depender de um valor diferente aqui.
+     */
+    @DynamicPropertySource
+    static void overrideRateLimitProperties(DynamicPropertyRegistry registry) {
+        registry.add("rate-limit.login.max-attempts", () -> 100_000);
+        registry.add("rate-limit.login.window-seconds", () -> 60);
+    }
+
     @Autowired
     protected MockMvc mockMvc;
 

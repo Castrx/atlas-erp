@@ -36,10 +36,16 @@ public class CustomerService {
         return toResponse(customer);
     }
 
+    /**
+     * Retorna somente clientes ativos — antes, a exclusão (inativação) era
+     * refletida apenas filtrando no frontend, e a API expunha todos os
+     * clientes, inclusive inativos. O filtro agora é aqui, no backend
+     * (débito registrado desde a Sprint 8A / AE-031).
+     */
     @Transactional(readOnly = true)
     public List<CustomerResponse> findAll() {
 
-        return customerRepository.findAll()
+        return customerRepository.findByActiveTrue()
                 .stream()
                 .map(this::toResponse)
                 .toList();

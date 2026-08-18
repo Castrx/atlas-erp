@@ -2,6 +2,7 @@ package com.atlas.backend.config;
 
 import com.atlas.backend.security.CustomUserDetailsService;
 import com.atlas.backend.security.JwtAuthenticationFilter;
+import com.atlas.backend.security.LoginRateLimitFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LoginRateLimitFilter loginRateLimitFilter;
     private final CustomUserDetailsService userDetailsService;
 
     @Bean
@@ -61,6 +63,14 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                // Antes do filtro JWT: uma tentativa de login bloqueada por rate
+                // limit nem chega a passar pela verificação de token (que de
+                // qualquer forma não se aplica a /auth/login, rota pública).
+                .addFilterBefore(
+                        loginRateLimitFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();

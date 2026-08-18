@@ -7,6 +7,7 @@ import com.atlas.backend.support.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -129,5 +130,57 @@ class CustomerControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(delete("/customers/" + customer.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
+    }
+
+    // --- Filtro de clientes inativos no backend (GET /customers) ---
+
+    @Test
+    void findAll_deveListarSomenteAtivos_quandoHaClienteAtivoEInativo() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+
+        Customer ativo = persistCustomer(TestDataFactory.uniqueDocument());
+        Customer inativo = persistCustomer(TestDataFactory.uniqueDocument());
+
+        mockMvc.perform(delete("/customers/" + inativo.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        String body = mockMvc.perform(get("/customers")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // Cliente ativo aparece; cliente inativado (exclusão = active=false,
+        // AE-031) não aparece mais na listagem.
+        assertThat(body).contains(ativo.getDocument());
+        assertThat(body).doesNotContain(inativo.getDocument());
+    }
+
+    @Test
+    void findAll_deveManterContratoDaResposta_paraClienteAtivo() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        CustomerRequest request = TestDataFactory.customerRequest(TestDataFactory.uniqueDocument());
+
+        mockMvc.perform(post("/customers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        String body = mockMvc.perform(get("/customers")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // Mesmo shape de sempre (CustomerResponse) — nenhum campo removido,
+        // renomeado nem com tipo alterado.
+        assertThat(body).contains("\"id\"", "\"name\"", "\"email\"", "\"phone\"",
+                "\"document\"", "\"active\"", "\"createdAt\"");
+        assertThat(body).contains(request.document());
+        assertThat(body).contains("\"active\":true");
     }
 }

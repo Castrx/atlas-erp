@@ -41,3 +41,12 @@ demo-data:
   # DEMO_DATA=true; ausente/false = runner completamente inerte. Idempotente
   # e não-destrutivo: insere apenas registros que ainda não existem.
   enabled: ${DEMO_DATA:false}
+
+rate-limit:
+  login:
+    # Mitigação de força bruta em POST /auth/login (AE-043) — contador em
+    # memória por IP, sem infraestrutura externa (ver LoginRateLimiter).
+    # Defaults razoáveis para uma instância única do backend; ajustável via
+    # variável de ambiente sem redeploy de código.
+    max-attempts: ${LOGIN_RATE_LIMIT_MAX_ATTEMPTS:5}
+    window-seconds: ${LOGIN_RATE_LIMIT_WINDOW_SECONDS:60}

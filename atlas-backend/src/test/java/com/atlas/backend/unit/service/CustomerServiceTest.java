@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,5 +117,23 @@ class CustomerServiceTest {
         assertThatThrownBy(() -> customerService.findById(404L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Cliente não encontrado.");
+    }
+
+    @Test
+    void findAll_deveRetornarApenasClientesAtivos_consultandoFindByActiveTrue() {
+        Customer ativo = Customer.builder()
+                .id(1L).name("Ativo").document("11111111111").active(true).build();
+
+        when(customerRepository.findByActiveTrue()).thenReturn(List.of(ativo));
+
+        List<CustomerResponse> response = customerService.findAll();
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).name()).isEqualTo("Ativo");
+        assertThat(response.get(0).active()).isTrue();
+
+        // A listagem não deve mais depender de findAll() (que traria
+        // inativos também) — só findByActiveTrue().
+        verify(customerRepository, never()).findAll();
     }
 }

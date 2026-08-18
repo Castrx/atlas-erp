@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -131,9 +133,22 @@ public class SaleService {
     @Transactional(readOnly = true)
     public List<SaleResponse> findAll() {
 
-        return saleRepository.findByStatus(SaleStatus.ACTIVE)
-                .stream()
-                .map(this::toResponse)
+        List<Sale> sales = saleRepository.findByStatus(SaleStatus.ACTIVE);
+
+        List<Long> saleIds = sales.stream().map(Sale::getId).toList();
+
+        // Uma única consulta para os itens de TODAS as vendas (produto já
+        // carregado via JOIN FETCH), em vez de uma consulta por venda —
+        // corrige o N+1 que existia aqui. IN () vazio não é uma query
+        // válida, então pula a consulta quando não há vendas.
+        Map<Long, List<SaleItem>> itemsBySaleId = saleIds.isEmpty()
+                ? Map.of()
+                : saleItemRepository.findBySaleIdInWithProduct(saleIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(item -> item.getSale().getId()));
+
+        return sales.stream()
+                .map(sale -> toResponse(sale, itemsBySaleId.getOrDefault(sale.getId(), List.of())))
                 .toList();
 
     }
@@ -192,10 +207,19 @@ public class SaleService {
         saleRepository.save(sale);
     }
 
+    /**
+     * Usado por {@code create()}/{@code findById()} — sempre uma única
+     * venda, então a consulta de itens aqui não é um N+1 (é feita uma vez).
+     * {@code findAll()} usa a sobrecarga abaixo, com os itens já
+     * pré-carregados em lote.
+     */
     private SaleResponse toResponse(Sale sale) {
+        return toResponse(sale, saleItemRepository.findBySale(sale));
+    }
 
-        List<SaleItemResponse> items = saleItemRepository.findBySale(sale)
-                .stream()
+    private SaleResponse toResponse(Sale sale, List<SaleItem> saleItems) {
+
+        List<SaleItemResponse> items = saleItems.stream()
                 .map(item -> new SaleItemResponse(
                         item.getProduct().getId(),
                         item.getProduct().getName(),

@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -257,5 +258,82 @@ class SaleServiceTest {
 
         verify(productRepository, never()).findByIdForUpdate(any());
         verify(saleItemRepository, never()).findBySale(any());
+    }
+
+    // --- findAll(): correção do N+1 (SaleItemRepository.findBySale() por venda) ---
+
+    @Test
+    void findAll_deveBuscarItensDeTodasAsVendas_emUmaUnicaConsulta_semMisturarEntreVendas() {
+        Sale vendaA = Sale.builder()
+                .id(1L).customer(cliente).total(new BigDecimal("40.00"))
+                .status(SaleStatus.ACTIVE).createdBy(EMAIL).build();
+
+        Sale vendaB = Sale.builder()
+                .id(2L).customer(cliente).total(new BigDecimal("60.00"))
+                .status(SaleStatus.ACTIVE).createdBy(EMAIL).build();
+
+        SaleItem itemA = SaleItem.builder()
+                .id(1L).sale(vendaA).product(produto).quantity(2)
+                .unitPrice(new BigDecimal("20.00")).subtotal(new BigDecimal("40.00")).build();
+
+        SaleItem itemB = SaleItem.builder()
+                .id(2L).sale(vendaB).product(produto).quantity(3)
+                .unitPrice(new BigDecimal("20.00")).subtotal(new BigDecimal("60.00")).build();
+
+        when(saleRepository.findByStatus(SaleStatus.ACTIVE)).thenReturn(List.of(vendaA, vendaB));
+        when(saleItemRepository.findBySaleIdInWithProduct(List.of(1L, 2L)))
+                .thenReturn(List.of(itemA, itemB));
+
+        List<SaleResponse> responses = saleService.findAll();
+
+        assertThat(responses).hasSize(2);
+
+        SaleResponse respostaA = responses.stream()
+                .filter(r -> r.id().equals(1L)).findFirst().orElseThrow();
+        SaleResponse respostaB = responses.stream()
+                .filter(r -> r.id().equals(2L)).findFirst().orElseThrow();
+
+        // Cada venda mantém só o seu próprio item — sem contaminação cruzada
+        // (o risco real de um agrupamento em lote malfeito).
+        assertThat(respostaA.items()).hasSize(1);
+        assertThat(respostaA.items().get(0).quantity()).isEqualTo(2);
+        assertThat(respostaA.items().get(0).subtotal()).isEqualByComparingTo("40.00");
+
+        assertThat(respostaB.items()).hasSize(1);
+        assertThat(respostaB.items().get(0).quantity()).isEqualTo(3);
+        assertThat(respostaB.items().get(0).subtotal()).isEqualByComparingTo("60.00");
+
+        // Uma única consulta para os itens de todas as vendas — não uma por
+        // venda (prova direta da correção do N+1).
+        verify(saleItemRepository, times(1)).findBySaleIdInWithProduct(any());
+        verify(saleItemRepository, never()).findBySale(any());
+    }
+
+    @Test
+    void findAll_deveRetornarListaVazia_semConsultarItens_quandoNaoHaVendas() {
+        when(saleRepository.findByStatus(SaleStatus.ACTIVE)).thenReturn(List.of());
+
+        List<SaleResponse> responses = saleService.findAll();
+
+        assertThat(responses).isEmpty();
+
+        // IN () vazio não é uma query válida — a implementação deve pular a
+        // consulta de itens quando não há vendas.
+        verify(saleItemRepository, never()).findBySaleIdInWithProduct(any());
+    }
+
+    @Test
+    void findAll_deveRetornarVendaSemItens_quandoVendaNaoTemNenhumItem() {
+        Sale vendaSemItens = Sale.builder()
+                .id(3L).customer(cliente).total(BigDecimal.ZERO)
+                .status(SaleStatus.ACTIVE).createdBy(EMAIL).build();
+
+        when(saleRepository.findByStatus(SaleStatus.ACTIVE)).thenReturn(List.of(vendaSemItens));
+        when(saleItemRepository.findBySaleIdInWithProduct(List.of(3L))).thenReturn(List.of());
+
+        List<SaleResponse> responses = saleService.findAll();
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).items()).isEmpty();
     }
 }

@@ -5,6 +5,7 @@ import com.atlas.backend.entity.Customer;
 import com.atlas.backend.entity.Product;
 import com.atlas.backend.support.AbstractIntegrationTest;
 import com.atlas.backend.support.TestDataFactory;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
@@ -159,5 +160,71 @@ class SaleControllerIT extends AbstractIntegrationTest {
 
         assertThat(productRepository.findById(product.getId()).orElseThrow().getStock())
                 .isEqualTo(10);
+    }
+
+    // --- findAll(): correção do N+1 (mesma resposta da API, itens corretos por venda) ---
+
+    @Test
+    void findAll_deveManterItensCorretosPorVenda_semMisturarEntreVendas() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product productA = persistProduct(TestDataFactory.uniqueSku(), category, 10);
+        Product productB = persistProduct(TestDataFactory.uniqueSku(), category, 10);
+        Customer customer = persistCustomer(TestDataFactory.uniqueDocument());
+
+        String responseA = mockMvc.perform(post("/sales")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(vendaPayload(customer.getId(), productA.getId(), 2)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String responseB = mockMvc.perform(post("/sales")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(vendaPayload(customer.getId(), productB.getId(), 3)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long saleIdA = objectMapper.readTree(responseA).get("id").asLong();
+        long saleIdB = objectMapper.readTree(responseB).get("id").asLong();
+
+        String listBody = mockMvc.perform(get("/sales")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode sales = objectMapper.readTree(listBody);
+
+        JsonNode saleANode = findSaleById(sales, saleIdA);
+        JsonNode saleBNode = findSaleById(sales, saleIdB);
+
+        // Mesmo shape de resposta de sempre (SaleResponse/SaleItemResponse),
+        // e cada venda mantém só o seu próprio item — sem contaminação
+        // cruzada entre vendas na listagem em lote.
+        assertThat(saleANode.get("items")).hasSize(1);
+        assertThat(saleANode.get("items").get(0).get("productId").asLong()).isEqualTo(productA.getId());
+        assertThat(saleANode.get("items").get(0).get("quantity").asInt()).isEqualTo(2);
+
+        assertThat(saleBNode.get("items")).hasSize(1);
+        assertThat(saleBNode.get("items").get(0).get("productId").asLong()).isEqualTo(productB.getId());
+        assertThat(saleBNode.get("items").get(0).get("quantity").asInt()).isEqualTo(3);
+    }
+
+    private JsonNode findSaleById(JsonNode sales, long id) {
+
+        for (JsonNode sale : sales) {
+            if (sale.get("id").asLong() == id) {
+                return sale;
+            }
+        }
+
+        throw new AssertionError("Venda #" + id + " não encontrada na listagem.");
     }
 }
