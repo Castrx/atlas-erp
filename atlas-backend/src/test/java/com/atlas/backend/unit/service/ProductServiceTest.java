@@ -172,4 +172,34 @@ class ProductServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Produto não encontrado.");
     }
+
+    @Test
+    void delete_deveInativarProduto_semRemoverDoBanco() {
+        Product existente = Product.builder()
+                .id(1L).name("Produto").sku("SKU-1")
+                .costPrice(BigDecimal.TEN).salePrice(BigDecimal.valueOf(20))
+                .stock(5).minimumStock(1).active(true)
+                .category(categoria())
+                .build();
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        productService.delete(1L);
+
+        assertThat(existente.getActive()).isFalse();
+        verify(productRepository).save(existente);
+        verify(productRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_deveLancarBusinessException_quandoProdutoNaoExiste() {
+        when(productRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> productService.delete(404L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Produto não encontrado.");
+
+        verify(productRepository, never()).save(any());
+    }
 }

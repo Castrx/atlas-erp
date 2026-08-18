@@ -27,6 +27,13 @@ const categoriaFake: Category = {
   active: true,
 };
 
+const categoriaInativaFake: Category = {
+  id: 2,
+  name: "Linha Descontinuada",
+  description: null,
+  active: false,
+};
+
 const produtoExistente: Product = {
   id: 7,
   name: "Teclado Mecânico",
@@ -55,6 +62,23 @@ async function preencherCamposObrigatorios(user: ReturnType<typeof userEvent.set
 describe("ProductFormDialog", () => {
   beforeEach(() => {
     vi.mocked(categoryService.getAll).mockResolvedValue([categoriaFake]);
+  });
+
+  it("não deve listar categorias inativas no seletor de categoria", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(categoryService.getAll).mockResolvedValue([categoriaFake, categoriaInativaFake]);
+
+    render(
+      <ProductFormDialog open onClose={vi.fn()} onSuccess={vi.fn()} onError={vi.fn()} />
+    );
+
+    await user.click(screen.getByLabelText("Categoria"));
+
+    expect(await screen.findByRole("option", { name: "Periféricos" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Linha Descontinuada" })
+    ).not.toBeInTheDocument();
   });
 
   it("deve exibir mensagens de validação e não enviar, quando campos obrigatórios estão vazios", async () => {

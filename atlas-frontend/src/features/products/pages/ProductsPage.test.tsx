@@ -35,6 +35,14 @@ const produtoFake: Product = {
   categoryName: "Periféricos",
 };
 
+const produtoInativoFake: Product = {
+  ...produtoFake,
+  id: 2,
+  name: "Teclado Descontinuado",
+  sku: "TECLADO-001",
+  active: false,
+};
+
 const categoriaFake: Category = {
   id: 1,
   name: "Periféricos",
@@ -61,40 +69,49 @@ describe("ProductsPage", () => {
     vi.mocked(categoryService.getAll).mockResolvedValue([categoriaFake]);
   });
 
-  it("deve ocultar o botão Excluir para usuário USER, mantendo o Editar", async () => {
+  it("deve ocultar o botão Inativar para usuário USER, mantendo o Editar", async () => {
     renderAs(["USER"]);
 
     expect(await screen.findByText("Mouse Gamer")).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Editar Mouse Gamer" })).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Excluir Mouse Gamer" })
+      screen.queryByRole("button", { name: "Inativar Mouse Gamer" })
     ).not.toBeInTheDocument();
   });
 
-  it("deve exibir o botão Excluir para usuário ADMIN", async () => {
+  it("deve exibir o botão Inativar para usuário ADMIN", async () => {
     renderAs(["ADMIN"]);
 
     expect(await screen.findByText("Mouse Gamer")).toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: "Excluir Mouse Gamer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inativar Mouse Gamer" })).toBeInTheDocument();
   });
 
-  it("deve excluir o produto após a confirmação", async () => {
+  it("deve inativar o produto após a confirmação", async () => {
     const user = userEvent.setup();
     vi.mocked(productService.delete).mockResolvedValue(undefined);
 
     renderAs(["ADMIN"]);
 
     await screen.findByText("Mouse Gamer");
-    await user.click(screen.getByRole("button", { name: "Excluir Mouse Gamer" }));
+    await user.click(screen.getByRole("button", { name: "Inativar Mouse Gamer" }));
 
-    expect(screen.getByRole("heading", { name: "Excluir produto" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Inativar produto" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Excluir" }));
+    await user.click(screen.getByRole("button", { name: "Inativar" }));
 
     await waitFor(() => expect(productService.delete).toHaveBeenCalledWith(1));
-    expect(await screen.findByText("Produto excluído com sucesso.")).toBeInTheDocument();
+    expect(await screen.findByText("Produto inativado com sucesso.")).toBeInTheDocument();
+  });
+
+  it("não deve listar produtos inativos (exclusão no backend é inativação)", async () => {
+    vi.mocked(productService.getAll).mockResolvedValue([produtoFake, produtoInativoFake]);
+
+    renderAs(["ADMIN"]);
+
+    expect(await screen.findByText("Mouse Gamer")).toBeInTheDocument();
+    expect(screen.queryByText("Teclado Descontinuado")).not.toBeInTheDocument();
   });
 
   it("deve abrir o diálogo em modo edição com os dados pré-preenchidos", async () => {

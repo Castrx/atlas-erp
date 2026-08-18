@@ -3,8 +3,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { productService } from "../services/product.service";
 
 /**
- * Mutation de exclusão de produto. Ao excluir com sucesso, invalida
- * ["products"] — a listagem refaz o fetch sozinho.
+ * Mutation de exclusão de produto. No backend a exclusão é uma inativação
+ * (active=false) — o produto e seu histórico de vendas/estoque são
+ * preservados; ao concluir, invalida ["products"] — a listagem refaz o
+ * fetch sozinha.
  */
 export function useDeleteProduct() {
   const queryClient = useQueryClient();

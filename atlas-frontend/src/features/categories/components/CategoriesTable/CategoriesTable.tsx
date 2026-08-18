@@ -17,7 +17,10 @@ interface CategoriesTableProps {
   categories: Category[];
   /** Chamado ao clicar em editar. Se ausente, o botão Editar não é renderizado. */
   onEdit?: (category: Category) => void;
-  /** Chamado ao clicar em excluir. Se ausente, o botão Excluir não é renderizado. */
+  /**
+   * Chamado ao clicar em inativar (exclusão no backend é inativação —
+   * active=false, não remoção física). Se ausente, o botão não é renderizado.
+   */
   onDelete?: (category: Category) => void;
 }
 
@@ -74,7 +77,7 @@ export function CategoriesTable({ categories, onEdit, onDelete }: CategoriesTabl
 
                   {onDelete && (
                     <IconButton
-                      aria-label={`Excluir ${category.name}`}
+                      aria-label={`Inativar ${category.name}`}
                       size="small"
                       color="error"
                       onClick={() => onDelete(category)}

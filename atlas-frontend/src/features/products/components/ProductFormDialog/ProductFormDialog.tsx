@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import axios from "axios";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,6 +99,15 @@ export function ProductFormDialog({
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+
+  // Categoria inativa (active=false) não pode ser atribuída a um produto —
+  // não há reativação, então só as ativas entram no seletor. Mesmo padrão
+  // de "activeProducts"/"activeCustomers" já usado em SaleFormDialog e
+  // StockMovementDialog.
+  const activeCategories = useMemo(
+    () => categories?.filter((category) => category.active) ?? [],
+    [categories]
+  );
 
   const {
     register,
@@ -255,7 +265,7 @@ export function ProductFormDialog({
                   helperText={errors.categoryId?.message}
                   fullWidth
                 >
-                  {categories?.map((category) => (
+                  {activeCategories.map((category) => (
                     <MenuItem
                       key={category.id}
                       value={String(category.id)}

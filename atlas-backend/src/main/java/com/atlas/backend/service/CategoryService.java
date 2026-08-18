@@ -66,13 +66,21 @@ public class CategoryService {
         return toResponse(repository.save(category));
     }
 
+    /**
+     * "Exclusão" de categoria é inativação (active = false), nunca remoção
+     * física — mesmo padrão de CustomerService/ProductService. Produto
+     * referencia category_id como FK não-nula, sem CASCADE; inativar evita
+     * quebrar essa FK e preserva os produtos já vinculados à categoria.
+     */
     public void delete(Long id) {
 
         Category category = repository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Categoria não encontrada."));
 
-        repository.delete(category);
+        category.setActive(false);
+
+        repository.save(category);
     }
 
     private CategoryResponse toResponse(Category category) {

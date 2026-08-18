@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import axios from "axios";
 import { Plus, Tags } from "lucide-react";
 import { Alert, Box, Button, Skeleton, Snackbar, Stack, Typography } from "@mui/material";
@@ -39,6 +39,12 @@ export function CategoriesPage() {
 
   const deleteCategory = useDeleteCategory();
 
+  // A exclusão de categoria no backend é uma inativação (active = false) e o
+  // GET /categories retorna todas. Para o "Inativar" ter o efeito esperado
+  // na UI, a listagem e o métrico consideram apenas as ativas — mesmo
+  // padrão já usado em Clientes/Produtos.
+  const activeCategories = useMemo(() => data?.filter((c) => c.active) ?? [], [data]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
@@ -74,7 +80,7 @@ export function CategoriesPage() {
       setCategoryToDelete(null);
       setFeedback({
         open: true,
-        message: "Categoria excluída com sucesso.",
+        message: "Categoria inativada com sucesso.",
         severity: "success",
       });
     } catch (err) {
@@ -84,7 +90,7 @@ export function CategoriesPage() {
         message:
           axios.isAxiosError(err) && err.response?.data?.message
             ? err.response.data.message
-            : "Não foi possível excluir a categoria. Tente novamente.",
+            : "Não foi possível inativar a categoria. Tente novamente.",
         severity: "error",
       });
     }
@@ -163,12 +169,12 @@ export function CategoriesPage() {
           <Box sx={{ maxWidth: 280 }}>
             <MetricCard
               title="Total de categorias"
-              value={String(data.length)}
+              value={String(activeCategories.length)}
               icon={<Tags size={24} />}
             />
           </Box>
 
-          {data.length === 0 ? (
+          {activeCategories.length === 0 ? (
             <Box
               sx={{
                 display: "flex",
@@ -207,7 +213,7 @@ export function CategoriesPage() {
             </Box>
           ) : (
             <CategoriesTable
-              categories={data}
+              categories={activeCategories}
               onEdit={isAdmin ? (category) => {
                 setEditingCategory(category);
                 setDialogOpen(true);
@@ -231,13 +237,13 @@ export function CategoriesPage() {
 
       <ConfirmDialog
         open={categoryToDelete !== null}
-        title="Excluir categoria"
+        title="Inativar categoria"
         message={
           categoryToDelete
-            ? `Deseja excluir "${categoryToDelete.name}"? Essa ação não pode ser desfeita.`
+            ? `Deseja inativar "${categoryToDelete.name}"? A categoria deixará de aparecer nas listagens, mas os produtos já vinculados a ela serão preservados.`
             : ""
         }
-        confirmLabel="Excluir"
+        confirmLabel="Inativar"
         onConfirm={handleConfirmDelete}
         onCancel={() => setCategoryToDelete(null)}
         confirming={deleteCategory.isPending}

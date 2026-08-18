@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import axios from "axios";
 import { Package, PackageSearch, Plus } from "lucide-react";
 import { Alert, Box, Button, Skeleton, Snackbar, Stack, Typography } from "@mui/material";
@@ -7,6 +7,7 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { MetricCard } from "../../../components/ui/MetricCard";
 import { useAuth } from "../../../core/auth";
+import { tokens } from "../../../core/theme/tokens";
 import { ProductFormDialog } from "../components/ProductFormDialog";
 import { ProductsTable } from "../components/ProductsTable";
 import { useDeleteProduct } from "../hooks/useDeleteProduct";
@@ -30,6 +31,12 @@ export function ProductsPage() {
   const { hasRole } = useAuth();
 
   const deleteProduct = useDeleteProduct();
+
+  // A exclusão de produto no backend é uma inativação (active = false) e o
+  // GET /products retorna todos. Para o "Inativar" ter o efeito esperado na
+  // UI, a listagem e o métrico consideram apenas os ativos — mesmo padrão
+  // já usado em Clientes (CustomersPage).
+  const activeProducts = useMemo(() => data?.filter((p) => p.active) ?? [], [data]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -66,7 +73,7 @@ export function ProductsPage() {
       setProductToDelete(null);
       setFeedback({
         open: true,
-        message: "Produto excluído com sucesso.",
+        message: "Produto inativado com sucesso.",
         severity: "success",
       });
     } catch (err) {
@@ -76,7 +83,7 @@ export function ProductsPage() {
         message:
           axios.isAxiosError(err) && err.response?.data?.message
             ? err.response.data.message
-            : "Não foi possível excluir o produto. Tente novamente.",
+            : "Não foi possível inativar o produto. Tente novamente.",
         severity: "error",
       });
     }
@@ -127,7 +134,8 @@ export function ProductsPage() {
           <Stack
             spacing={1.5}
             sx={{
-              border: "1px solid #E5E7EB",
+              border: "1px solid",
+              borderColor: "divider",
               borderRadius: 3,
               p: 3,
             }}
@@ -155,12 +163,12 @@ export function ProductsPage() {
           <Box sx={{ maxWidth: 280 }}>
             <MetricCard
               title="Total de produtos"
-              value={String(data.length)}
+              value={String(activeProducts.length)}
               icon={<Package size={24} />}
             />
           </Box>
 
-          {data.length === 0 ? (
+          {activeProducts.length === 0 ? (
             <Box
               sx={{
                 display: "flex",
@@ -170,13 +178,14 @@ export function ProductsPage() {
                 py: 8,
                 px: 4,
                 borderRadius: 3,
-                border: "1px dashed #CBD5E1",
-                bgcolor: "#F8FAFC",
+                border: "1px dashed",
+                borderColor: "divider",
+                bgcolor: "background.default",
               }}
             >
               <PackageSearch
                 size={48}
-                color="#94A3B8"
+                color={tokens.colors.textSecondary}
               />
 
               <Typography
@@ -198,7 +207,7 @@ export function ProductsPage() {
             </Box>
           ) : (
             <ProductsTable
-              products={data}
+              products={activeProducts}
               onEdit={(product) => {
                 setEditingProduct(product);
                 setDialogOpen(true);
@@ -220,13 +229,13 @@ export function ProductsPage() {
 
       <ConfirmDialog
         open={productToDelete !== null}
-        title="Excluir produto"
+        title="Inativar produto"
         message={
           productToDelete
-            ? `Deseja excluir "${productToDelete.name}"? Essa ação não pode ser desfeita.`
+            ? `Deseja inativar "${productToDelete.name}"? O produto deixará de aparecer nas listagens e não poderá mais ser vendido, mas seu histórico de vendas e movimentações de estoque será preservado.`
             : ""
         }
-        confirmLabel="Excluir"
+        confirmLabel="Inativar"
         onConfirm={handleConfirmDelete}
         onCancel={() => setProductToDelete(null)}
         confirming={deleteProduct.isPending}

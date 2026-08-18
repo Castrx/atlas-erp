@@ -91,12 +91,21 @@ public class ProductService {
         return toResponse(product);
     }
 
+    /**
+     * "Exclusão" de produto é inativação (active = false), nunca remoção
+     * física — mesmo padrão de CustomerService. Produto referenciado por
+     * StockMovement/SaleItem (FK não-nula, sem CASCADE) não pode ser
+     * removido fisicamente sem violar a FK; inativar preserva o histórico
+     * e é reversível, ao contrário de um hard delete.
+     */
     public void delete(Long id) {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Produto não encontrado."));
 
-        productRepository.delete(product);
+        product.setActive(false);
+
+        productRepository.save(product);
     }
 
     private ProductResponse toResponse(Product product) {

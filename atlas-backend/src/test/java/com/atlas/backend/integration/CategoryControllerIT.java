@@ -2,14 +2,17 @@ package com.atlas.backend.integration;
 
 import com.atlas.backend.dto.category.CreateCategoryRequest;
 import com.atlas.backend.entity.Category;
+import com.atlas.backend.entity.Product;
 import com.atlas.backend.support.AbstractIntegrationTest;
 import com.atlas.backend.support.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -69,5 +72,42 @@ class CategoryControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(delete("/categories/" + category.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
+    }
+
+    // --- Inativação (correção do hard delete: categoria em uso não pode quebrar por FK) ---
+
+    @Test
+    void delete_deveInativarCategoria_semQuebrarFK_quandoUsadaPorProduto() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product product = persistProduct(TestDataFactory.uniqueSku(), category, 5);
+
+        // product.category_id é FK não-nula sem CASCADE — antes da correção,
+        // o DELETE físico da categoria em uso derrubava com 500.
+        mockMvc.perform(delete("/categories/" + category.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        Category afterDelete = categoryRepository.findById(category.getId()).orElseThrow();
+        assertThat(afterDelete.getActive()).isFalse();
+
+        // O produto vinculado permanece intacto, com a mesma categoria.
+        Product afterDeleteProduct = productRepository.findById(product.getId()).orElseThrow();
+        assertThat(afterDeleteProduct.getCategory().getId()).isEqualTo(category.getId());
+    }
+
+    @Test
+    void delete_deveTornarCategoriaComActiveFalse_masGetPorIdContinuaAcessivel() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+
+        mockMvc.perform(delete("/categories/" + category.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/categories/" + category.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
     }
 }

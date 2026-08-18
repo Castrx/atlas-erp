@@ -3,6 +3,7 @@ package com.atlas.backend.integration;
 import com.atlas.backend.dto.product.CreateProductRequest;
 import com.atlas.backend.dto.product.UpdateProductRequest;
 import com.atlas.backend.entity.Category;
+import com.atlas.backend.entity.Customer;
 import com.atlas.backend.entity.Product;
 import com.atlas.backend.repository.StockMovementRepository;
 import com.atlas.backend.support.AbstractIntegrationTest;
@@ -166,6 +167,86 @@ class ProductControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(delete("/products/" + product.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
+    }
+
+    // --- Inativação (correção do hard delete: produto em uso não pode quebrar por FK) ---
+
+    @Test
+    void delete_deveInativarProduto_semQuebrarFK_quandoTemMovimentacaoDeEstoque() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product product = persistProduct(TestDataFactory.uniqueSku(), category, 5);
+
+        // Gera uma movimentação de estoque referenciando o produto
+        // (stock_movements.product_id, FK não-nula sem CASCADE). Antes da
+        // correção, o DELETE físico batia nessa FK e retornava 500.
+        String entryPayload = """
+                {"productId": %d, "quantity": 10, "reason": "Reposição de teste"}
+                """.formatted(product.getId());
+
+        mockMvc.perform(post("/stock/entry")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(entryPayload))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/products/" + product.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        // O produto continua no banco (inativado) e a movimentação de
+        // estoque permanece intacta — nada de violação de FK.
+        Product afterDelete = productRepository.findById(product.getId()).orElseThrow();
+        assertThat(afterDelete.getActive()).isFalse();
+
+        assertThat(stockMovementRepository.findAll())
+                .anySatisfy(m -> assertThat(m.getProduct().getId()).isEqualTo(product.getId()));
+    }
+
+    @Test
+    void delete_deveInativarProduto_semQuebrarFK_quandoTemVenda() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product product = persistProduct(TestDataFactory.uniqueSku(), category, 5);
+        Customer customer = persistCustomer(TestDataFactory.uniqueDocument());
+
+        String vendaPayload = """
+                {"customerId": %d, "items": [{"productId": %d, "quantity": 1}]}
+                """.formatted(customer.getId(), product.getId());
+
+        // Gera um item de venda referenciando o produto (sale_item.product_id,
+        // FK não-nula sem CASCADE) — antes da correção, essa FK também
+        // derrubava o DELETE físico com 500.
+        mockMvc.perform(post("/sales")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(vendaPayload))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/products/" + product.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        Product afterDelete = productRepository.findById(product.getId()).orElseThrow();
+        assertThat(afterDelete.getActive()).isFalse();
+    }
+
+    @Test
+    void delete_deveTornarProdutoInvisivelNaListagemDeVenda_masGetPorIdContinuaAcessivel() throws Exception {
+        String token = registerAndLogin(TestDataFactory.uniqueEmail(), "ADMIN");
+        Category category = persistCategory("Categoria " + TestDataFactory.uniqueSku());
+        Product product = persistProduct(TestDataFactory.uniqueSku(), category, 5);
+
+        mockMvc.perform(delete("/products/" + product.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        // GET /products/{id} continua acessível (histórico/edição direta),
+        // agora com active=false.
+        mockMvc.perform(get("/products/" + product.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
     }
 
     // --- M4 (Sprint Security & Data Integrity): estoque imutável no PUT ---

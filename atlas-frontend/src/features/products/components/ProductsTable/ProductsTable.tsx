@@ -17,7 +17,10 @@ interface ProductsTableProps {
   products: Product[];
   /** Chamado ao clicar em editar. Se ausente, o botão Editar não é renderizado. */
   onEdit?: (product: Product) => void;
-  /** Chamado ao clicar em excluir. Se ausente, o botão Excluir não é renderizado. */
+  /**
+   * Chamado ao clicar em inativar (exclusão no backend é inativação —
+   * active=false, não remoção física). Se ausente, o botão não é renderizado.
+   */
   onDelete?: (product: Product) => void;
 }
 
@@ -37,7 +40,7 @@ export function ProductsTable({ products, onEdit, onDelete }: ProductsTableProps
     <TableContainer
       component={Paper}
       elevation={0}
-      sx={{ borderRadius: 3, border: "1px solid #E5E7EB" }}
+      sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider" }}
     >
       <Table>
         <TableHead>
@@ -86,7 +89,7 @@ export function ProductsTable({ products, onEdit, onDelete }: ProductsTableProps
 
                   {onDelete && (
                     <IconButton
-                      aria-label={`Excluir ${product.name}`}
+                      aria-label={`Inativar ${product.name}`}
                       size="small"
                       color="error"
                       onClick={() => onDelete(product)}
