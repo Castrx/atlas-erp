@@ -52,7 +52,7 @@ Ver [API_GUIDELINES.md](API_GUIDELINES.md) para convenções de request/response
 
 ### Autenticação e segurança
 
-Fluxo completo documentado em [SECURITY.md](SECURITY.md). Resumo: login stateless via JWT (HS256), filtro `JwtAuthenticationFilter` popula o `SecurityContextHolder` a partir do header `Authorization: Bearer <token>`, `SecurityConfig` define `/auth/**` e Swagger como públicos e tudo mais como autenticado.
+Fluxo completo documentado em [SECURITY.md](SECURITY.md). Resumo: login stateless via JWT (HS256), filtro `JwtAuthenticationFilter` popula o `SecurityContextHolder` a partir do header `Authorization: Bearer <token>`, `SecurityConfig` define `/auth/**` e Swagger como públicos e tudo mais como autenticado. `POST /auth/login` passa antes por `LoginRateLimitFilter` (contador em memória por IP via `LoginRateLimiter`, `429` ao exceder o limite configurável) — mitigação de força bruta, ver [SECURITY.md](SECURITY.md).
 
 ### Tratamento de erros
 
@@ -107,7 +107,7 @@ integration/   → MockMvc + Testcontainers, ponta a ponta real (*IT.java)
 support/       → infraestrutura reutilizável (AbstractIntegrationTest, TestDataFactory)
 ```
 
-Os testes de integração sobem um PostgreSQL efêmero via Testcontainers (mesma imagem do `docker-compose.yml`), completamente isolado do banco de desenvolvimento — nenhum teste depende de dado semeado manualmente, e `mvn test` não exige mais `docker compose up -d postgres` rodando antes (só o Docker em execução). Cada teste roda numa transação revertida ao final. O Surefire precisou ser configurado explicitamente para incluir `**/*IT.java` (por padrão só roda `**/*Test.java`), para `mvn test` cobrir as duas suítes num único comando. Cobertura atual: `JwtService`, `AuthenticationService`, `ProductService`, `CustomerService`, `DashboardService` (unitário) e `AuthController`, `ProductController`, `CustomerController` (integração) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-060`) para o que ainda falta.
+Os testes de integração sobem um PostgreSQL efêmero via Testcontainers (mesma imagem do `docker-compose.yml`), completamente isolado do banco de desenvolvimento — nenhum teste depende de dado semeado manualmente, e `mvn test` não exige mais `docker compose up -d postgres` rodando antes (só o Docker em execução). Cada teste roda numa transação revertida ao final. O Surefire precisou ser configurado explicitamente para incluir `**/*IT.java` (por padrão só roda `**/*Test.java`), para `mvn test` cobrir as duas suítes num único comando. Cobertura atual (137 testes): `JwtService`, `LoginRateLimiter`, `AuthenticationService`, `ProductService`, `CategoryService`, `CustomerService`, `SaleService`, `StockService`, `DashboardService`, `AdminBootstrapRunner`, `DemoDataRunner` (unitário) e `AuthController`, `ProductController`, `CategoryController`, `CustomerController`, `CompanyController`, `UserController`, `SaleController`, `StockController`, `DashboardController`, além de `LoginRateLimitIT` e `SaleConcurrencyIT` (integração) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-060`) para o que ainda falta.
 
 ## Frontend (`atlas-frontend/`)
 
@@ -143,8 +143,11 @@ AppProviders
 | `/customers` | protegido (`ProtectedRoute`) | `MainLayout` + `CustomersPage` (feature `customers`) |
 | `/vendas` | protegido (`ProtectedRoute`) | `MainLayout` + `VendasPage` (feature `vendas`) |
 | `/estoque` | protegido (`ProtectedRoute`) | `MainLayout` + `EstoquePage` (feature `estoque`) |
+| `/categories` | protegido (`ProtectedRoute`) | `MainLayout` + `CategoriesPage` (feature `categories`) |
+| `/users` | protegido (`ProtectedRoute requiredRole="ADMIN"`) | `MainLayout` + `UsersPage` (feature `users`) |
+| `/companies` | protegido (`ProtectedRoute requiredRole="ADMIN"`) | `MainLayout` + `CompaniesPage` (feature `companies`) |
 
-Ainda não há rotas para Categorias, Empresa e Usuários — são os próximos módulos do roadmap. `NavItem` (`components/navigation`) aceita um `path` opcional e navega via `react-router` quando presente; hoje os itens "Dashboard", "Produtos", "Clientes", "Vendas" e "Estoque" do menu têm `path` associado (`menu.ts`) — Categorias, Usuários, Empresas, Financeiro, Relatórios e Configurações permanecem apenas visuais, sem destino.
+Todos os módulos de negócio já têm rota e item de menu ligados. `NavItem` (`components/navigation`) aceita um `path` opcional e navega via `react-router` quando presente; "Usuários" e "Empresas" usam `requiredRole="ADMIN"` tanto na rota quanto no filtro do menu (`Sidebar`, via `hasRole`) — a autorização real de qualquer forma é sempre o `@PreAuthorize` do backend. Financeiro, Relatórios e Configurações permanecem apenas visuais, sem destino (fora de escopo, ver Marco H no [Roadmap](ROADMAP.md)).
 
 ### Autenticação no frontend
 
@@ -156,7 +159,7 @@ Ainda não há rotas para Categorias, Empresa e Usuários — são os próximos 
 
 ### Data fetching
 
-TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso em todas as features (`dashboard`, `products`, `customers`, `vendas`, `estoque`): cada hook (`useDashboard`, `useProducts`, `useCustomers`, `useSales`, `useStockHistory`, etc.) consome o endpoint via `useQuery`, sem cálculo algum no cliente — só busca e cacheia o payload já processado pelo backend. É o padrão recomendado para os próximos módulos (Categorias, Empresa, Usuários).
+TanStack Query está configurado (`core/providers/queryClient.ts`) e, desde a Sprint 3A, é o padrão em uso em todas as features (`dashboard`, `products`, `customers`, `vendas`, `estoque`, `categories`, `companies`, `users`): cada hook (`useDashboard`, `useProducts`, `useCustomers`, `useSales`, `useStockHistory`, `useCategories`, `useCompanies`, `useUsers`, etc.) consome o endpoint via `useQuery`, sem cálculo algum no cliente — só busca e cacheia o payload já processado pelo backend.
 
 ### Testes automatizados
 
@@ -170,7 +173,7 @@ src/test/test-utils.tsx  → render() customizado (QueryClientProvider + MemoryR
                             e createQueryWrapper() para testes de hook
 ```
 
-Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual: `ProtectedRoute` (incl. `requiredRole`), `ProductFormDialog`, `CustomerFormDialog`, `SaleFormDialog`, `StockMovementDialog`, as páginas `ProductsPage`, `CustomersPage`, `VendasPage`, `EstoquePage`, os hooks `useProducts`, `useCustomers`, `useSales`, `useStockHistory`, `AuthContext` (roles/`hasRole` após login/logout), `RequireRole`, `Sidebar` (menu por papel), leitura de roles do JWT (`token.ts`) e `shouldClearSessionOnError` (`axios.ts`) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
+Convenção: teste ao lado do arquivo testado (`Componente.test.tsx` no mesmo diretório), não numa árvore `__tests__/` paralela — casa com a estrutura `features/<módulo>/` já estabelecida. Os `*.service.ts` são mockados no lugar dos hooks nos testes de componente/hook, para continuar exercitando TanStack Query e React Hook Form + Zod reais, só sem bater na API. Cobertura atual (71 testes): `ProtectedRoute` (incl. `requiredRole`), `ProductFormDialog`, `CustomerFormDialog`, `SaleFormDialog`, `StockMovementDialog`, as páginas `ProductsPage`, `CustomersPage`, `VendasPage`, `EstoquePage`, `CategoriesPage`, os hooks `useProducts`, `useCustomers`, `useSales`, `useStockHistory`, `AuthContext` (roles/`hasRole` após login/logout), `RequireRole`, `Sidebar` (menu por papel), leitura de roles do JWT (`token.ts`) e `shouldClearSessionOnError` (`axios.ts`) — ver [PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md) (`AE-061`) para o que ainda falta.
 
 ## Débito técnico e código órfão conhecido
 
@@ -196,3 +199,5 @@ A entidade `Company` existe no domínio ([domain-model.md](domain-model.md)) com
 | Sem refresh token | Escopo deliberadamente reduzido na Sprint 1B; expiração fixa de 24h por ora |
 | Estrutura `core/` vs `features/` no frontend | Separar infraestrutura transversal (auth, api, router, theme) de módulos de produto, permitindo que cada feature evolua isoladamente |
 | Flyway em vez de `ddl-auto: update` | Schema versionado e auditável (`ddl-auto: validate` no `application.yml`) |
+| Exclusão de Produto/Categoria/Cliente é inativação (`active = false`), nunca remoção física | Essas entidades são referenciadas por FK não-nula sem `CASCADE` (`StockMovement`, `SaleItem`, `Product.category`) — hard delete quebraria a FK ou o histórico; inativar preserva os dois e é reversível |
+| Rate limiting de login em memória, por IP, sem infraestrutura externa | Suficiente para uma instância única do backend (estágio atual do projeto); troca por um contador compartilhado (Redis) fica registrada como limitação em [SECURITY.md](SECURITY.md) se/quando houver múltiplas instâncias |

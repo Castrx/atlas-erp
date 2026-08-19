@@ -154,6 +154,53 @@ Sprint de fechamento do MVP, sem funcionalidade nova de negócio. Nenhuma UI nov
 - **Testes**: `DemoDataRunnerTest` (unitário, Mockito puro — inerte sem `DEMO_DATA`, popula quando habilitado, idempotente quando os produtos já existem) e `DemoDataRunnerIT` (integração com Testcontainers — dados coerentes na subida + idempotência num segundo `run()`). Total backend 88 (era 83). Frontend permanece 64.
 - Fecha os itens `AE-001/002/003/005/006/065` do backlog; Marco A concluído (ver abaixo).
 
+### Sprint P5 — Hardening de segurança e integridade de dados (commit `e28f41d`)
+Sprint de fechamento pós-MVP, sem funcionalidade nova de negócio visível — reforça validação e mensagens do que já existia.
+
+- **Backend**: mensagem de `401` do `authenticationEntryPoint` deixou de expor `authException.getMessage()` (detalhe interno do framework) e passou a ser fixa (`"Não autenticado."`). `RegisterRequest`/`CreateUserRequest`/`UpdateUserRequest` passaram a validar senha com `@Size(min = 8)`. `ProductService.update()` parou de sobrescrever `stock` a partir do request — estoque só muda pelos fluxos de estoque (`StockService`, venda, cancelamento), nunca por uma edição de cadastro. `SaleService.create()` passou a rejeitar venda para cliente ou produto **inativo** (histórico e cancelamento continuam funcionando normalmente). `UserService`: corrigido bug em que `Set.of(role)` (imutável) quebrava o merge do JPA em `update()` — trocado por `HashSet` mutável.
+- **Infra**: `atlas-frontend/nginx.conf` (proxy reverso `/api`) adicionado nesta sprint, antecipando a Sprint P3 de containerização completa.
+- Novos testes cobrindo cada regra acima (`ProductServiceTest`, `SaleServiceTest`, `AuthControllerIT`, `ProductControllerIT`, `SaleControllerIT`, `UserControllerIT`).
+
+### Sprint Categorias + Empresas + Usuários — UI no frontend (commit `5838b86`)
+Fecha o último gap do Marco C: os três módulos que só existiam como endpoint (Categorias, Empresas, Usuários) ganharam interface própria, no mesmo padrão das features anteriores (`types/services/hooks/components/pages`).
+
+- **Categorias** (`features/categories/`): listagem, cadastro e edição para `USER`+`ADMIN`; exclusão `ADMIN`-only (reflexo de RBAC, mesmo padrão da Sprint 7B/8A). Rota `/categories`, sem `requiredRole` (leitura já é USER+ADMIN no backend).
+- **Empresas** (`features/companies/`) e **Usuários** (`features/users/`): CRUD completo, mas as duas telas inteiras são `ADMIN`-only — rota com `ProtectedRoute requiredRole="ADMIN"` e item de menu filtrado por `hasRole`, espelhando o `@PreAuthorize` `ADMIN`-only do backend nesses dois controllers desde a Sprint 7A.
+- **Roteamento/menu**: `/categories`, `/users`, `/companies` adicionadas a `routes.tsx` e `menu.ts` — os últimos itens do menu que ainda eram apenas visuais (exceto Financeiro/Relatórios, fora de escopo).
+- Fecha os itens `AE-032`, `AE-035` e `AE-036` do backlog — Marco C concluído.
+
+### Sprint P6 — Inativação segura de Produto e Categoria (commit `efc6a71`)
+Alinha Produtos e Categorias ao padrão já usado em Clientes (Sprint 8A): exclusão vira inativação, não remoção física.
+
+- **Backend**: `ProductService.delete()` e `CategoryService.delete()` passaram de `repository.delete()` para `entity.setActive(false)` + `save()`. Motivo: `Product` é referenciado por `StockMovement`/`SaleItem` (FK não-nula, sem `CASCADE`) e `Category` por `Product.category` (idem) — um hard delete quebraria a FK assim que houvesse qualquer histórico associado; a inativação preserva o histórico e é reversível.
+- **Frontend**: `ProductsTable`/`ProductFormDialog`, `CategoriesTable`/`useDeleteCategory`, `ProductsPage`/`CategoriesPage` ajustados para o novo contrato (produto/categoria inativos deixam de aparecer nas listagens, mesmo tratamento já dado a clientes inativos).
+- Novos testes cobrindo a inativação nos dois lados (`CategoryServiceTest`, `ProductServiceTest`, `CategoryControllerIT`, `ProductControllerIT`, `CategoriesPage.test.tsx`, `ProductFormDialog.test.tsx`, `ProductsPage.test.tsx`).
+
+### Sprint P7 — Responsividade e acessibilidade (commit `65d6aac`)
+Sprint de polimento transversal, sem funcionalidade nova — cobre todas as telas de negócio (Vendas, Estoque, Clientes) e o shell da aplicação.
+
+- **`MainLayout`**: Sidebar deixa de ser sempre fixa — abaixo do breakpoint `md`, vira um `Drawer` (MUI) temporário, acionado por um botão de menu no `Header`; no desktop (`md`+), permanece fixa como antes. Padding do conteúdo também responsivo (`{ xs: 2, md: 4 }`).
+- **`Header`/`NavItem`/`Sidebar`**: ajustes de alvo de toque, espaçamento e atributos de acessibilidade (papéis/rótulos ARIA) para o menu e a navegação.
+- **Diálogos e páginas** (`ConfirmDialog`, `CustomerFormDialog`, `SaleFormDialog`, `StockMovementDialog`, `CustomersPage`, `VendasPage`, `EstoquePage`): ajustes de layout para telas estreitas (largura/altura de diálogo, empilhamento de ações).
+
+### Sprint P8 — Hardening de autenticação e otimização de consultas (commit `8e03154`)
+Duas frentes independentes, ambas fechando débitos já registrados no backlog.
+
+- **Rate limiting em `POST /auth/login`** (`AE-043`): `LoginRateLimiter` (contador em memória por IP, janela deslizante) + `LoginRateLimitFilter` (roda antes do filtro JWT na cadeia de segurança) — `429 Too Many Requests` ao exceder o limite. Configurável via `RateLimitProperties`/`application.yml` (`LOGIN_RATE_LIMIT_MAX_ATTEMPTS`, default 5; `LOGIN_RATE_LIMIT_WINDOW_SECONDS`, default 60), sem infraestrutura externa — adequado à instância única do backend hoje.
+- **Correção do N+1 em `SaleService.findAll()`**: antes, a listagem de vendas fazia uma consulta de itens por venda (N+1 clássico). Agora busca os itens de todas as vendas ativas numa única query (`SaleItemRepository.findBySaleIdInWithProduct`, com produto já carregado via `JOIN FETCH`), agrupados em memória por `saleId`.
+- **Filtro de clientes inativos no backend** (`AE-031`): `CustomerRepository.findByActiveTrue()` + `CustomerService.findAll()` — o filtro que só existia no frontend (`CustomersPage`, `useMemo`) agora também é aplicado na origem; `GET /customers` passa a retornar somente clientes ativos.
+- Novos testes cobrindo as três frentes (`LoginRateLimiterTest`, `LoginRateLimitIT`, `SaleServiceTest`, `SaleControllerIT`, `CustomerServiceTest`, `CustomerControllerIT`). Total backend, somando as sprints P5–P8: 137.
+- Fecha o item `AE-043` do backlog e resolve o débito de filtro de clientes registrado desde a Sprint 8A.
+
+### Sprint P9 — Rebrand visual (commit `3253ae2`)
+Substitui a paleta azul de template pela identidade própria do Atlas ERP, em todas as telas — sem alteração de regra de negócio, backend (exceto CORS) ou dados.
+
+- **Marca**: novo componente `CompassMark` (bússola em traço único, `currentColor`) — reaparece no favicon, na Sidebar e na tela de login, com a mesma linguagem visual do Atlas AI (produto irmão da suíte).
+- **Tema/tokens** (`core/theme/tokens.ts`, `core/theme/theme.ts`): base "papel" quente (`#F4F2ED`) e acento verde-petróleo (`#146B5C`) no lugar do azul padrão; `success`/`warning`/`error` do MUI conectados explicitamente aos tokens (senão `Chip`/`Alert` cairiam nas cores default do MUI); cabeçalho de tabela e hover de linha padronizados uma vez em `theme.ts`, cascateando para todas as tabelas (Produtos, Clientes, Vendas, Estoque). Tipografia: Fraunces (serifada, via Google Fonts) reservada à marca (wordmark da Sidebar e título do login) — nunca em dados/tabelas/formulários.
+- **Telas**: Login redesenhado (card com `CompassMark`, subtítulo, campos e erro no novo tema); `MetricCard`, `ErrorState` e as tabelas de Produtos/Clientes/Vendas/Estoque com bordas e cores vindas do tema (`divider`, `primary.main`, `success.main`, `warning.main`) em vez de hex fixo.
+- **Backend**: `SecurityConfig` — `http://localhost:3000` (frontend Docker/nginx) adicionado às origens CORS permitidas, junto de `5173`/`127.0.0.1:5173`.
+- Testado ponta a ponta: `npm run lint`, `npm run build`, `npx vitest run` (71/71), `./mvnw test` (137/137), `git diff --check`, e validação visual manual (Login, Dashboard, Produtos, Clientes; 375px, 768px, desktop).
+
 ## Próximos marcos (planejado)
 
 Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a sequência lógica recomendada, mas está sujeita a repriorização.
@@ -162,7 +209,7 @@ Estes marcos ainda não têm data ou sprint associada — a ordem abaixo é a se
 Concluído no fechamento do MVP: as duplicatas de `queryClient` e `auth.service`, o `LoginForm` fora de lugar e o kit de componentes `Atlas*` foram removidos (decisão explícita: remover, nenhum uso no app) — itens `AE-001/002/003/005/006`.
 
 ### Marco C — Módulos de negócio no frontend
-Módulos com UI concluídos: Produtos (Sprints 4A/4B/8A), Clientes (5A/8A), Vendas e Estoque (sprint Vendas + Estoque). Restam sem UI, backend-only: Categorias (`AE-032`), Empresas (`AE-035`) e Usuários (`AE-036`).
+Concluído. Módulos com UI: Produtos (Sprints 4A/4B/8A/P6), Clientes (5A/8A/P8), Vendas e Estoque (sprint Vendas + Estoque), Categorias, Empresas e Usuários (sprint Categorias + Empresas + Usuários — `AE-032`/`AE-035`/`AE-036`). Nenhum módulo de negócio do domínio atual permanece backend-only.
 
 ### Marco D — Autorização por papel (RBAC)
 Concluído (Sprints 7A backend + 7B frontend). Refinamento futuro possível: autorização por posse de recurso (ex.: USER cancelar só a própria venda) — deliberadamente fora de escopo por ora, ver Sprint 7A no histórico acima.
@@ -171,10 +218,10 @@ Concluído (Sprints 7A backend + 7B frontend). Refinamento futuro possível: aut
 Vincular `User`, `Product`, `Customer` e demais entidades a `Company`, e aplicar esse escopo em todas as consultas — pré-requisito para qualquer uso realista com mais de uma empresa cadastrada.
 
 ### Marco F — Hardening de sessão
-Avaliar refresh token, expiração deslizante, e/ou revogação de token — hoje deliberadamente fora de escopo (ver [SECURITY.md](SECURITY.md)). O logging de debug do `JwtAuthenticationFilter` já foi removido do perfil de produção na Sprint P1 (`AE-010`).
+Rate limiting em `/auth/login` concluído na Sprint P8 (`AE-043`) — mitiga força bruta, mas não substitui os itens abaixo. Ainda em aberto: avaliar refresh token, expiração deslizante, e/ou revogação de token — hoje deliberadamente fora de escopo (ver [SECURITY.md](SECURITY.md)). O logging de debug do `JwtAuthenticationFilter` já foi removido do perfil de produção na Sprint P1 (`AE-010`).
 
 ### Marco G — Qualidade e automação
-Fundação de testes automatizados entregue na Sprint 6A (autenticação, Products, Customers, Dashboard); Vendas e Estoque ganharam UI e testes na sprint de fechamento (Sprint Vendas + Estoque). O pipeline de CI (lint + testes + build em cada PR — `AE-063`) foi criado na Sprint P2 (`.github/workflows/ci.yml`), faltando apenas a validação em PR real (pendente de push). Ainda falta: cobertura unitária de regra de negócio dos módulos sem UI (`Company`, `User` — `AE-060`) e possivelmente testes E2E de navegador real cobrindo o fluxo de autenticação já validado manualmente na Sprint 1B (`AE-062`).
+Fundação de testes automatizados entregue na Sprint 6A (autenticação, Products, Customers, Dashboard); Vendas e Estoque ganharam UI e testes na sprint de fechamento (Sprint Vendas + Estoque); Categorias, rate limiting, N+1 de vendas e inativação de Produto/Categoria ganharam testes nas Sprints Categorias+Empresas+Usuários/P6/P8. Total atual: 137 testes backend + 71 frontend. O pipeline de CI (lint + testes + build em cada PR — `AE-063`) foi criado na Sprint P2 (`.github/workflows/ci.yml`), faltando apenas a validação em PR real (pendente de push). Ainda falta: cobertura de teste dedicada para as telas de Empresas e Usuários no frontend (só `CategoriesPage` ganhou teste próprio na sprint de UI dos três módulos), cobertura unitária de regra de negócio adicional de `Company`/`User` no backend (`AE-060`) e possivelmente testes E2E de navegador real cobrindo o fluxo de autenticação já validado manualmente na Sprint 1B (`AE-062`).
 
 ### Marco H — Financeiro e Relatórios
 Módulos hoje presentes apenas como itens de menu no frontend (`Financeiro`, `Relatórios`) sem nenhuma implementação de backend ou frontend — ainda não modelados.

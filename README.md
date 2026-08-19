@@ -2,23 +2,28 @@
 
 > Sistema ERP modular para pequenas e médias empresas — monorepo com **backend Spring Boot 3** (Java 21) e **frontend React 19** (TypeScript).
 
-O Atlas ERP cobre cadastro de produtos, clientes e categorias, controle de estoque, vendas, usuários e empresas, com autenticação JWT e controle de acesso por papel (RBAC). É um projeto de portifólio em evolução: a fundação (autenticação, RBAC, testes) e os módulos de Produtos e Clientes estão completos e validados de ponta a ponta.
+O Atlas ERP cobre cadastro de produtos, clientes, categorias, usuários e empresas, controle de estoque e vendas, com autenticação JWT e controle de acesso por papel (RBAC). É um projeto de portifólio em evolução: a fundação (autenticação, RBAC, testes), todos os módulos de negócio com UI própria e a identidade visual estão completos e validados de ponta a ponta.
 
 ## Status do projeto
 
 | Área | Status |
 |---|---|
 | Autenticação JWT (login/logout, rotas protegidas) | ✅ Completa e testada |
+| Rate limiting em `POST /auth/login` | ✅ Completo e testado (mitigação de força bruta) |
 | RBAC — papéis `ADMIN`/`USER` (backend `@PreAuthorize` + reflexo na UI) | ✅ Completo e testado |
-| Produtos — CRUD completo (listar, criar, editar, excluir) | ✅ Completo e testado |
-| Clientes — CRUD completo (exclusão = inativação) | ✅ Completo e testado |
+| Produtos — CRUD completo (listar, criar, editar, excluir = inativação) | ✅ Completo e testado |
+| Clientes — CRUD completo (exclusão = inativação, filtrada no backend) | ✅ Completo e testado |
+| Categorias — CRUD completo (exclusão = inativação) | ✅ Completo e testado |
+| Empresas — CRUD completo (ADMIN-only) | ✅ Completo e testado |
+| Usuários — CRUD completo (ADMIN-only) | ✅ Completo e testado |
 | Dashboard com dados reais (indicadores, gráfico, listas) | ✅ Funcional |
-| Vendas — registro, listagem e cancelamento (ADMIN) | ✅ Completo e testado |
+| Vendas — registro, listagem e cancelamento (ADMIN), sem N+1 na listagem | ✅ Completo e testado |
 | Estoque — entrada/saída e histórico paginado | ✅ Completo e testado |
 | Dados de demonstração (Sprint P4) | ✅ Idempotente, ativado por `DEMO_DATA=true` |
-| Categorias, Empresas, Usuários | ⚙️ Backend implementado — UI pendente |
+| Identidade visual (rebrand — CompassMark, tema, tokens) | ✅ Concluído em todas as telas |
+| Responsividade e acessibilidade (Sidebar → Drawer mobile, alvos de toque) | ✅ Concluído |
 | Multi-tenancy (Empresa) | 📋 Modelado no domínio, não aplicado |
-| Testes automatizados | ✅ 88 backend + 64 frontend |
+| Testes automatizados | ✅ 137 backend + 71 frontend |
 | CI/CD | ✅ Workflow configurado (lint + testes + build em cada PR) |
 | Containerização | ✅ Compose completo (postgres + backend + frontend + pgAdmin) |
 
@@ -26,15 +31,18 @@ Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md).
 
 ## Funcionalidades existentes
 
-- **Autenticação**: login/logout com JWT stateless; senha armazenada com bcrypt; rotas protegidas no frontend e endpoints protegidos no backend.
+- **Autenticação**: login/logout com JWT stateless; senha armazenada com bcrypt (mínimo 8 caracteres); rotas protegidas no frontend e endpoints protegidos no backend. `POST /auth/login` tem rate limiting em memória por IP (5 tentativas / 60s por padrão, configurável, `429` ao exceder).
 - **RBAC**: `register` público cria **sempre** usuário `USER` (nunca `ADMIN`). O backend autoriza por papel via `@PreAuthorize` (excluir é `ADMIN`-only); a UI reflete isso (ex.: oculta o botão "Excluir" para `USER`). Um `403` não derruba a sessão.
-- **Produtos**: CRUD completo com validação (Zod + backend), categoria obrigatória, estoque mínimo, erros de SKU duplicado exibidos na UI. Exclusão é física (`DELETE`).
-- **Clientes**: CRUD completo com CPF/CNPJ único, e-mail validado. Exclusão é **inativação** (`active = false`); a listagem e o métrico consideram apenas clientes ativos (decisão documentada — filtrar no backend é débito conhecido).
+- **Produtos**: CRUD completo com validação (Zod + backend), categoria obrigatória, estoque mínimo, erros de SKU duplicado exibidos na UI. Exclusão é **inativação** (`active = false`), não remoção física — produto pode estar referenciado em vendas/movimentos de estoque.
+- **Clientes**: CRUD completo com CPF/CNPJ único, e-mail validado. Exclusão é **inativação** (`active = false`); `GET /customers` já retorna apenas clientes ativos (filtro no backend).
+- **Categorias**: CRUD completo; exclusão também é inativação (produto referencia categoria por FK não-nula).
+- **Empresas** e **Usuários**: CRUD completo, telas `ADMIN`-only (rota e menu só aparecem para esse papel; backend também nega `403` para `USER`).
 - **Dashboard**: métricas reais (total de produtos/clientes, baixo estoque, vendas recentes, receita dos últimos 7 dias) com gráfico.
-- **Vendas**: registro com cliente + itens dinâmicos (produto e quantidade, total calculado pelo backend), listagem com total/data e cancelamento (ADMIN-only) que restaura o estoque.
+- **Vendas**: registro com cliente + itens dinâmicos (produto e quantidade, total calculado pelo backend), listagem com total/data (sem N+1 — itens de todas as vendas carregados em lote) e cancelamento (ADMIN-only) que restaura o estoque.
 - **Estoque**: entrada e saída com motivo obrigatório, e histórico paginado (10/página) com tipo (Entrada/Saída), responsável e data.
 - **Dados de demonstração**: com `DEMO_DATA=true`, o backend cria na subida empresa, categorias, produtos, clientes, vendas e movimentos de estoque de exemplo — idempotente e não-destrutivo (insere apenas o que ainda não existe), para demonstrar Dashboard, Vendas e Estoque já com dados.
-- **Backend exposto**: categorias, empresas e usuários têm endpoints implementados (parte sem UI ainda).
+- **Identidade visual**: rebrand completo (marca "bússola" — `CompassMark` — reaparecendo no favicon, Sidebar e login; tema/tokens próprios em `core/theme`) aplicado em todas as telas.
+- **Responsividade e acessibilidade**: Sidebar vira `Drawer` temporário (menu hambúrguer no Header) abaixo do breakpoint `md`; layout, diálogos e tabelas ajustados para mobile (375px) e tablet (768px), além de desktop.
 
 ## Stack
 
@@ -65,8 +73,8 @@ Detalhes em [docs/architecture.md](docs/architecture.md), [docs/SECURITY.md](doc
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| Backend (unit + integração com Testcontainers) | `cd atlas-backend && ./mvnw test` | ✅ 88 testes |
-| Frontend (vitest + React Testing Library) | `cd atlas-frontend && npm test` | ✅ 64 testes |
+| Backend (unit + integração com Testcontainers) | `cd atlas-backend && ./mvnw test` | ✅ 137 testes |
+| Frontend (vitest + React Testing Library) | `cd atlas-frontend && npm test` | ✅ 71 testes |
 | Lint / build | `npm run lint` · `npm run build` | ✅ |
 
 Os testes de integração do backend sobem um PostgreSQL efêmero via Testcontainers (isolado do banco de desenvolvimento) e rodam as migrations Flyway reais.
@@ -163,23 +171,24 @@ Na subida, o backend cria o usuário `ADMIN` (bcrypt). **Idempotente**: se o e-m
 
 ## Screenshots
 
-Algumas capturas do estado atual (mais em [`docs/demo/`](docs/demo/)):
+Capturas do estado atual, pós-rebrand (mais em [`docs/demo/current/`](docs/demo/current/); versões anteriores em [`docs/demo/archive/`](docs/demo/archive/)):
 
 | | |
 |---|---|
-| ![Login](docs/demo/01-login.jpg) | ![Dashboard](docs/demo/03-dashboard-indicadores.jpg) |
-| ![Produtos](docs/demo/07-produtos-listagem.jpg) | ![Cadastro de produto](docs/demo/09-produtos-cadastro-preenchido.jpg) |
+| ![Login](docs/demo/current/01-login.png) | ![Dashboard](docs/demo/current/02-dashboard.png) |
+| ![Produtos](docs/demo/current/03-produtos.png) | ![Clientes](docs/demo/current/04-clientes.png) |
+| ![Estoque](docs/demo/current/05-estoque.png) | ![Vendas](docs/demo/current/06-vendas.png) |
 
 ## Roadmap / limitações
 
-- Módulos sem UI ainda: Categorias, Empresas, Usuários (backends prontos).
+- Todos os módulos de negócio já têm UI própria — Categorias, Empresas e Usuários (antes backend-only) foram concluídos numa sprint de fechamento.
 - Vendas sem paginação e sem listagem de vendas canceladas — o `GET /sales` retorna apenas as ativas.
 - Histórico de estoque sem filtro por produto.
 - Multi-tenancy modelado, não aplicado.
-- Filtrar clientes inativos no backend (hoje é feito no frontend).
+- Sem refresh token — sessão expira em 24h fixas, sem renovação nem revogação (ver [SECURITY.md](docs/SECURITY.md)).
 - Paginação/busca nas listagens.
 - CI configurado (`.github/workflows/ci.yml`); validação em PR real pendente de push.
-- Containerização completa concluída na Sprint P3; dados de demonstração (Sprint P4) concluídos e ativáveis via `DEMO_DATA=true`.
+- Containerização completa concluída na Sprint P3; dados de demonstração (Sprint P4) concluídos e ativáveis via `DEMO_DATA=true`; identidade visual (rebrand) concluída em todas as telas.
 
 Veja o [Roadmap](docs/ROADMAP.md) e o [Backlog](docs/PRODUCT_BACKLOG.md) para o plano detalhado.
 
