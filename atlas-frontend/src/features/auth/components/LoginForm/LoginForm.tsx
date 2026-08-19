@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import { useAuth } from "../../../../core/auth";
+import { CompassMark } from "../../../../components/ui/CompassMark";
 
 interface LoginFormData {
   email: string;
@@ -38,40 +39,78 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Stack spacing={3}>
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          textAlign="center"
-        >
-          Atlas ERP
-        </Typography>
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 3, sm: 5 },
+        borderRadius: 4,
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Stack spacing={3}>
+          <Stack
+            spacing={1.5}
+            alignItems="center"
+            textAlign="center"
+          >
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CompassMark size={26} />
+            </Box>
 
-        {error && <Alert severity="error">{error}</Alert>}
+            <Typography
+              variant="h4"
+              fontWeight={600}
+              sx={{ fontFamily: '"Fraunces", "Iowan Old Style", Georgia, serif' }}
+            >
+              Atlas ERP
+            </Typography>
 
-        <TextField
-          label="E-mail"
-          {...register("email")}
-          fullWidth
-        />
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
+              Entre para acessar o sistema.
+            </Typography>
+          </Stack>
 
-        <TextField
-          label="Senha"
-          type="password"
-          {...register("password")}
-          fullWidth
-        />
+          {error && <Alert severity="error">{error}</Alert>}
 
-        <Button
-          variant="contained"
-          size="large"
-          type="submit"
-          disabled={isSubmitting}
-        >
-          Entrar
-        </Button>
-      </Stack>
-    </form>
+          <TextField
+            label="E-mail"
+            {...register("email")}
+            fullWidth
+          />
+
+          <TextField
+            label="Senha"
+            type="password"
+            {...register("password")}
+            fullWidth
+          />
+
+          <Button
+            variant="contained"
+            size="large"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            Entrar
+          </Button>
+        </Stack>
+      </form>
+    </Paper>
   );
 }

@@ -5,6 +5,7 @@ import {
   Typography,
   Box,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 import type { MetricCardProps } from "./MetricCard.types";
 
@@ -12,21 +13,22 @@ export function MetricCard({
   title,
   value,
   icon,
-  color = "#2563EB",
+  color = "primary.main",
 }: MetricCardProps) {
   return (
     <Card
       elevation={0}
-      sx={{
+      sx={(theme) => ({
         borderRadius: 3,
-        border: "1px solid #E5E7EB",
+        border: "1px solid",
+        borderColor: "divider",
         transition: "box-shadow 0.2s, border-color 0.2s",
 
         "&:hover": {
-          borderColor: "#CBD5E1",
-          boxShadow: "0 4px 16px rgba(15, 23, 42, 0.06)",
+          borderColor: alpha(theme.palette.primary.main, 0.4),
+          boxShadow: `0 4px 16px ${alpha(theme.palette.text.primary, 0.06)}`,
         },
-      }}
+      })}
     >
       <CardContent>
         <Stack
@@ -57,7 +59,7 @@ export function MetricCard({
               height: 56,
               borderRadius: "50%",
               bgcolor: color,
-              color: "#fff",
+              color: "common.white",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

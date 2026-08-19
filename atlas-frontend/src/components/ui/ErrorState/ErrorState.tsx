@@ -1,5 +1,6 @@
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Box, Button, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 
 interface ErrorStateProps {
   message?: string;
@@ -15,6 +16,8 @@ export function ErrorState({
   message = "Não foi possível carregar os dados. Tente novamente em instantes.",
   onRetry,
 }: ErrorStateProps) {
+  const theme = useTheme();
+
   return (
     <Box
       sx={{
@@ -25,19 +28,20 @@ export function ErrorState({
         py: 6,
         px: 4,
         borderRadius: 3,
-        border: "1px solid #FECACA",
-        bgcolor: "#FEF2F2",
+        border: "1px solid",
+        borderColor: alpha(theme.palette.error.main, 0.3),
+        bgcolor: alpha(theme.palette.error.main, 0.06),
       }}
     >
       <AlertCircle
         size={40}
-        color="#DC2626"
+        color={theme.palette.error.main}
       />
 
       <Typography
         variant="h6"
         fontWeight={700}
-        color="#991B1B"
+        color="error.dark"
         mt={2}
       >
         Algo deu errado

@@ -1,15 +1,23 @@
+/**
+ * Tokens de identidade do Atlas ERP — mesma linguagem de marca do Atlas AI
+ * (produto irmão desta suíte): base "papel" quente e acento verde-petróleo,
+ * em vez do azul padrão de template. `theme.ts` é a fonte primária para
+ * componentes MUI (via `sx`, ex.: `bgcolor: "background.default"`); estes
+ * tokens existem para o que fica fora do sistema de tema do MUI (ex.: cores
+ * de SVG do Recharts em SalesChart).
+ */
 export const tokens = {
   colors: {
-    background: "#F8FAFC",
+    background: "#F4F2ED",
     surface: "#FFFFFF",
 
-    primary: "#2563EB",
-    primaryHover: "#1D4ED8",
+    primary: "#146B5C",
+    primaryHover: "#0E5548",
 
-    text: "#0F172A",
-    textSecondary: "#64748B",
+    text: "#1C2333",
+    textSecondary: "#656B7D",
 
-    border: "#E2E8F0",
+    border: "#DDD6C7",
 
     success: "#16A34A",
     warning: "#D97706",
@@ -33,6 +41,6 @@ export const tokens = {
 
   shadow: {
     none: "none",
-    card: "0 1px 2px rgba(15,23,42,.04)",
+    card: "0 1px 2px rgba(28, 35, 51, .05)",
   },
 } as const;

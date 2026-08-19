@@ -86,12 +86,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        // Origens do frontend em desenvolvimento (Vite).
+        // Origens do frontend em desenvolvimento (Vite) e do frontend servido
+        // via Docker/nginx (proxy reverso /api — ver atlas-frontend/nginx.conf).
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://127.0.0.1:5173"
+                "http://127.0.0.1:5173",
+                "http://localhost:3000"
         ));
 
         configuration.setAllowedMethods(List.of(

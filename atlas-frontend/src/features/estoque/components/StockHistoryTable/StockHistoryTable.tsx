@@ -35,7 +35,7 @@ export function StockHistoryTable({ movements }: StockHistoryTableProps) {
     <TableContainer
       component={Paper}
       elevation={0}
-      sx={{ borderRadius: 3, border: "1px solid #E5E7EB" }}
+      sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider" }}
     >
       <Table>
         <TableHead>

@@ -11,6 +11,7 @@ import {
 
 import type { DailyRevenue } from "../../types";
 import { formatCurrency, formatShortDate } from "../../utils";
+import { tokens } from "../../../../core/theme/tokens";
 
 interface SalesChartProps {
   data: DailyRevenue[];
@@ -23,7 +24,7 @@ export function SalesChart({ data }: SalesChartProps) {
   }));
 
   return (
-    <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E5E7EB" }}>
+    <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
       <CardContent>
         <Typography variant="h6" fontWeight={700} mb={2}>
           Faturamento — últimos 7 dias
@@ -32,17 +33,17 @@ export function SalesChart({ data }: SalesChartProps) {
         <Box sx={{ width: "100%", height: 260 }}>
           <ResponsiveContainer>
             <AreaChart data={chartData} margin={{ left: 8, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={tokens.colors.border} vertical={false} />
 
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12, fill: "#64748B" }}
-                axisLine={{ stroke: "#E5E7EB" }}
+                tick={{ fontSize: 12, fill: tokens.colors.textSecondary }}
+                axisLine={{ stroke: tokens.colors.border }}
                 tickLine={false}
               />
 
               <YAxis
-                tick={{ fontSize: 12, fill: "#64748B" }}
+                tick={{ fontSize: 12, fill: tokens.colors.textSecondary }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value: number) => formatCurrency(value)}
@@ -53,7 +54,7 @@ export function SalesChart({ data }: SalesChartProps) {
                 formatter={(value) => [formatCurrency(Number(value)), "Faturamento"]}
                 contentStyle={{
                   borderRadius: 8,
-                  border: "1px solid #E5E7EB",
+                  border: `1px solid ${tokens.colors.border}`,
                   fontSize: 13,
                 }}
               />
@@ -61,9 +62,9 @@ export function SalesChart({ data }: SalesChartProps) {
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="#2563EB"
+                stroke={tokens.colors.primary}
                 strokeWidth={2}
-                fill="#2563EB"
+                fill={tokens.colors.primary}
                 fillOpacity={0.12}
               />
             </AreaChart>

@@ -109,7 +109,7 @@ export function DashboardPage() {
               title="Estoque baixo"
               value={String(data.lowStockCount)}
               icon={<AlertTriangle size={24} />}
-              color="#D97706"
+              color="warning.main"
             />
 
             <MetricCard
@@ -134,14 +134,14 @@ export function DashboardPage() {
               title="Faturamento hoje"
               value={formatCurrency(data.todayRevenue)}
               icon={<Wallet size={24} />}
-              color="#16A34A"
+              color="success.main"
             />
 
             <MetricCard
               title="Faturamento do mês"
               value={formatCurrency(data.monthRevenue)}
               icon={<TrendingUp size={24} />}
-              color="#16A34A"
+              color="success.main"
             />
           </Box>
 

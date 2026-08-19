@@ -10,7 +10,7 @@ export function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        bgcolor: "#F8FAFC",
+        bgcolor: "background.default",
         p: 2,
       }}
     >

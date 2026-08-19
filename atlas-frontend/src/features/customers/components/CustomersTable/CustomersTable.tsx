@@ -32,7 +32,7 @@ export function CustomersTable({ customers, onEdit, onDelete }: CustomersTablePr
     <TableContainer
       component={Paper}
       elevation={0}
-      sx={{ borderRadius: 3, border: "1px solid #E5E7EB" }}
+      sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider" }}
     >
       <Table>
         <TableHead>

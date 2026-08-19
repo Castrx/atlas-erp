@@ -9,7 +9,7 @@ interface RecentSalesProps {
 
 export function RecentSales({ sales }: RecentSalesProps) {
   return (
-    <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E5E7EB" }}>
+    <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
       <CardContent>
         <Typography variant="h6" fontWeight={700} mb={2}>
           Vendas recentes
